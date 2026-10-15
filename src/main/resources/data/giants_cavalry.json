@@ -1,0 +1,10 @@
+{
+    "name": "horn rider",
+    "hitPoints": 0,
+    "armorClass": 15,
+    "attackRoll": 0,
+    "attackDamage": 4,
+    "movement": 2,
+    "moral": 0,
+    "mana": 0
+}

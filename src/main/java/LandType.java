@@ -1,8 +1,8 @@
 public enum LandType {
-    PLANE("♣_ .", Color.GREEN, Color.BG_GRAY),
+    PLANE("♣____", Color.GREEN, Color.BG_GRAY),
     FOREST("♠♣⇞↟", Color.GREEN, Color.BG_GRAY),
     MOUNTAIN("△▲", Color.BLACK, Color.BG_GRAY),
-    DESERT("~.", Color.YELLOW, Color.BG_GRAY);
+    DESERT("~", Color.YELLOW, Color.BG_GRAY);
 
     private final String symbolPool;
     private final Color defaultDisplayColor;

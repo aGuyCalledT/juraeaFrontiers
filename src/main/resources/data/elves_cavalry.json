@@ -1,0 +1,10 @@
+{
+    "name": "eagle rider",
+    "hitPoints": 0,
+    "armorClass": 0,
+    "attackRoll": 0,
+    "attackDamage": 0,
+    "movement": 0,
+    "moral": 4,
+    "mana": 0
+}

@@ -1,0 +1,10 @@
+{
+    "name": "skeleton",
+    "hitPoints": 1,
+    "armorClass": 8,
+    "attackRoll": 2,
+    "attackDamage": 1,
+    "movement": 1,
+    "moral": 1,
+    "mana": 0
+}
