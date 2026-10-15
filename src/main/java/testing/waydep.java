@@ -1,6 +1,6 @@
 package testing;
 
-public class WorldHello {
+public class waydep {
 
     public static void main(String[] args) {
         helloWorld("System.out.println");

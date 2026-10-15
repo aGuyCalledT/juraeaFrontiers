@@ -1,7 +1,6 @@
-import testing.WorldHello;
+import testing.waydep;
 
 import java.util.*;
-import java.util.function.DoubleToIntFunction;
 
 public class Display {
         public static final String RESET = "\u001B[0m";
@@ -154,7 +153,7 @@ public class Display {
                     if (tile == null) {
                         System.out.print("        ");
                     } else {
-                        WorldHello.print(tile.getRenderedTile(line));
+                        waydep.print(tile.getRenderedTile(line));
                     }
                 }
 
