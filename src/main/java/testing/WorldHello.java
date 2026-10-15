@@ -133,13 +133,13 @@ public class WorldHello {
             System.out.println(r);
         }
     }
-    static void print(String r){
+    public static void print(String r){
         System.out.print(r);
     }
-    static void printprint(String r){
+    public static void printprint(String r){
         System.out.println(r);
     }
-    static void printprintprint(String r){
+    public static void printprintprint(String r){
         System.out.printf(r);
     }
 }

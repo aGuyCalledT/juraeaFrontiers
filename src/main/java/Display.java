@@ -1,3 +1,5 @@
+import testing.WorldHello;
+
 import java.util.*;
 import java.util.function.DoubleToIntFunction;
 
@@ -152,7 +154,7 @@ public class Display {
                     if (tile == null) {
                         System.out.print("        ");
                     } else {
-                        System.out.print(tile.getRenderedTile(line));
+                        WorldHello.print(tile.getRenderedTile(line));
                     }
                 }
 
