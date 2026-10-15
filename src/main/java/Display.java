@@ -158,6 +158,7 @@ public class Display {
                 }
 
                 System.out.println();
+                waydep.main();
             }
         }
     }
