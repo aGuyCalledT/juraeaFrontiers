@@ -7,6 +7,14 @@ public class TileRenderer {
     private static final String DEFAULT_BG = "\u001B[49m";
 
     public static String renderTile(HexTile tile, int lineIndex) {
+        if (tile.landType == LandType.OCEAN) {
+            String lineText = "";
+            for (int i = 0; i < TILE_WIDTH; i ++) {
+                lineText += LandType.OCEAN.getSymbolPool().charAt(0);
+            }
+            return LandType.OCEAN.getDefaultDisplayColor().code + lineText + Color.RESET.code;
+        }
+
         String lineText = getBaseTerrainPattern(tile, lineIndex);
 
         if (lineIndex == 0 && tile.occupiedBy != null && tile.occupiedBy != Faction.NONE) {
@@ -21,6 +29,11 @@ public class TileRenderer {
             char leftCorner  = isTop ? '\uE0BA' : '\uE0BE';
             char rightCorner = isTop ? '\uE0B8' : '\uE0BC';
 
+            if (tile.backgroundColor == Color.BG_DEFAULT) {
+                leftCorner = ' ';
+                rightCorner= ' ';
+
+            }
             String bgAsFg = getForegroundFromBackground(tile.backgroundColor.code);
             String middleText = lineText.substring(1, TILE_WIDTH - 1);
 
@@ -65,11 +78,11 @@ public class TileRenderer {
         int padNeeded = TILE_WIDTH - textToOverlay.length();
         int leftPad = padNeeded / 2;
 
-        StringBuilder sb = new StringBuilder();
-        sb.append(background.substring(0, leftPad));
-        sb.append(textToOverlay);
-        sb.append(background.substring(leftPad + textToOverlay.length(), TILE_WIDTH));
+        StringBuilder stringBuilder = new StringBuilder();
+        stringBuilder.append(background.substring(0, leftPad));
+        stringBuilder.append(textToOverlay);
+        stringBuilder.append(background.substring(leftPad + textToOverlay.length(), TILE_WIDTH));
 
-        return sb.toString();
+        return stringBuilder.toString();
     }
 }

@@ -7,15 +7,17 @@ public class HexTile {
     public Faction occupiedBy;
 
     public LandType landType;
+    public String domain;
     public Color displayColor;
     public Color backgroundColor;
 
     public Map<HexDirection, HexTile> neighbors = new EnumMap<>(HexDirection.class);
 
-    public HexTile(int q, int r, LandType landType, Color displayColor, Color backgroundColor) {
+    public HexTile(int q, int r, LandType landType, String domain, Color displayColor, Color backgroundColor) {
         this.q = q;
         this.r = r;
         this.landType = landType;
+        this.domain = domain;
         this.displayColor = displayColor;
         this.backgroundColor = backgroundColor;
         this.occupiedBy = Faction.NONE;
@@ -33,6 +35,10 @@ public class HexTile {
         this.occupiedBy = faction;
         this.displayColor = faction.getPrimaryColor();
         this.backgroundColor = faction.getBackgroundColor();
+    }
+
+    public boolean isOuterTile() {
+        return 6 != neighbors.size();
     }
 
     @Override

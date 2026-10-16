@@ -4,10 +4,8 @@ public enum Color {
 
     // --- TEXT STILE ---
     BOLD("\033[1m"),
-    DIM("\033[2m"),          // Für Fog of War / inaktive Felder
     ITALIC("\033[3m"),
     UNDERLINE("\033[4m"),
-    BLINK("\033[5m"),        // Für aktiven Cursor / Animation
     REVERSE("\033[7m"),      // Invertiert FG und BG (gut für Cursor)
 
     // --- STANDARD FOREGROUND ---
@@ -19,12 +17,7 @@ public enum Color {
     CYAN("\033[36m"),
     WHITE("\033[37m"),
     BLACK("\033[30m"),
-
-    // --- ERWEITERTE 256-FARBEN FOR JURÄA (FG) ---
-    FOREST_GREEN("\033[38;5;28m"),
-    SAND_YELLOW("\033[38;5;214m"),
-    ROCK_GRAY("\033[38;5;244m"),
-    NECRO_PURPLE("\033[38;5;93m"),
+    INVISIBLE("\033[30m"),
 
     // --- STANDARD BACKGROUND ---
     BG_DEFAULT("\033[49m"),
@@ -36,12 +29,7 @@ public enum Color {
     BG_CYAN("\033[46m"),
     BG_WHITE("\033[47m"),
     BG_GRAY("\033[100m"),
-
-    // --- ERWEITERTE 256-FARBEN HINTERGRÜNDE (BG) ---
-    BG_DARK_GREEN("\033[48;5;22m"),
-    BG_SAND("\033[48;5;137m"),
-    BG_DARK_GRAY("\033[48;5;236m"),
-    BG_VOID_PURPLE("\033[48;5;53m");
+    BG_BLACK("\033[40m");
 
     public final String code;
 
@@ -49,12 +37,10 @@ public enum Color {
         this.code = code;
     }
 
-    // Dynamic 24-Bit RGB Helper (Text)
     public static String rgb(int r, int g, int b) {
         return String.format("\033[38;2;%d;%d;%dm", r, g, b);
     }
 
-    // Dynamic 24-Bit RGB Helper (Hintergrund)
     public static String bgRgb(int r, int g, int b) {
         return String.format("\033[48;2;%d;%d;%dm", r, g, b);
     }

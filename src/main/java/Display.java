@@ -1,5 +1,3 @@
-import testing.waydep;
-
 import java.util.*;
 
 public class Display {
@@ -137,29 +135,163 @@ public class Display {
             return str.replaceAll("\u001B\\[[;\\d]*m", "").length();
         }
 
-    public static void displayMap(HexMap map) {
-        for (int r = -map.getRadius(); r <= map.getRadius(); r++) {
-            int spaces = Math.abs(r) * 3;
+    public static void displayMap(HexMap map, String strTL, String strTR, String strBL, String strBR) {
+        int radius = map.getRadius();
+        int tileWidth = 6;
+        int maxContentWidth = (2 * radius + 1) * tileWidth;
+        int totalLines = (2 * radius + 1) * 2;
 
-            int qStart = Math.max(-map.getRadius(), -r - map.getRadius());
-            int qEnd = Math.min(map.getRadius(), -r + map.getRadius());
+        // Gesamtes Rastermaß inklusive linkem/rechtem Rand (+2) und oben/unten (+2)
+        int gridW = maxContentWidth + 2;
+        int gridH = totalLines + 2;
 
-            for (int line = 0; line < 2; line++) {
-                for (int i = 0; i < spaces; i++) {
-                    System.out.print(" ");
+        // 1. UI-BOXEN GENERIEREN
+        UIBox tl = new UIBox(strTL, "TL", gridW, gridH);
+        UIBox tr = new UIBox(strTR, "TR", gridW, gridH);
+        UIBox bl = new UIBox(strBL, "BL", gridW, gridH);
+        UIBox br = new UIBox(strBR, "BR", gridW, gridH);
+
+        int currentMapY = 0;
+
+        // 2. ZEILE FÜR ZEILE RENDERN (inklusive Rahmen)
+        for (int y = 0; y < gridH; y++) {
+            if (y == 0 || y == gridH - 1) {
+                // Oberster und unterster Karten-Rand
+                for (int x = 0; x < gridW; x++) {
+                    System.out.print(getGridChar(x, y, gridW, gridH, tl, tr, bl, br));
                 }
+                System.out.println();
+            } else {
+                // Karten-Inhalt
+                int r = -radius + (currentMapY / 2);
+                int line = currentMapY % 2;
+
+                int leadingSpaces = Math.abs(r) * 3;
+                int qStart = Math.max(-radius, -r - radius);
+                int qEnd = Math.min(radius, -r + radius);
+
+                // A) Linker Rand
+                System.out.print(getGridChar(0, y, gridW, gridH, tl, tr, bl, br));
+                int currentX = 1;
+
+                // B) Einrückung links (wird UI-Ecke oder Ozean)
+                for (int i = 0; i < leadingSpaces; i++) {
+                    System.out.print(getGridChar(currentX, y, gridW, gridH, tl, tr, bl, br));
+                    currentX++;
+                }
+
+                // C) HexTiles rendern
                 for (int q = qStart; q <= qEnd; q++) {
-                    HexTile tile = map.getGrid().get(q + "," + r);
+                    HexTile tile = map.getTileGrid().get(q + "," + r);
                     if (tile == null) {
-                        System.out.print("        ");
+                        for (int i = 0; i < tileWidth; i++) {
+                            System.out.print(getGridChar(currentX, y, gridW, gridH, tl, tr, bl, br));
+                            currentX++;
+                        }
                     } else {
-                        waydep.print(tile.getRenderedTile(line));
+                        System.out.print(tile.getRenderedTile(line));
+                        currentX += tileWidth;
                     }
                 }
 
+                // D) Auffüllung rechts (wird UI-Ecke oder Ozean)
+                int rightPadding = (gridW - 1) - currentX;
+                for (int i = 0; i < rightPadding; i++) {
+                    System.out.print(getGridChar(currentX, y, gridW, gridH, tl, tr, bl, br));
+                    currentX++;
+                }
+
+                // E) Rechter Rand
+                System.out.print(getGridChar(gridW - 1, y, gridW, gridH, tl, tr, bl, br));
                 System.out.println();
-                //waydep.main();
+
+                currentMapY++;
             }
+        }
+    }
+
+    // ZENTRALE PIXEL-LOGIK: Gibt das richtige Zeichen (als String, falls du ANSI brauchst) zurück
+    private static String getGridChar(int x, int y, int gridW, int gridH, UIBox tl, UIBox tr, UIBox bl, UIBox br) {
+        if (tl.contains(x, y)) return String.valueOf(tl.getChar(x, y));
+        if (tr.contains(x, y)) return String.valueOf(tr.getChar(x, y));
+        if (bl.contains(x, y)) return String.valueOf(bl.getChar(x, y));
+        if (br.contains(x, y)) return String.valueOf(br.getChar(x, y));
+
+        // Wenn keine Box da ist, zeichnen wir den normalen Map-Rahmen
+        if (y == 0 && x == 0) return "╭";
+        if (y == 0 && x == gridW - 1) return "╮";
+        if (y == gridH - 1 && x == 0) return "╰";
+        if (y == gridH - 1 && x == gridW - 1) return "╯";
+        if (y == 0 || y == gridH - 1) return "─";
+        if (x == 0 || x == gridW - 1) return "│";
+
+        return LandType.OCEAN.getDefaultDisplayColor().code + "~" + Color.RESET.code; // Ozean (Du kannst hier auch z.B. "\u001b[34m~\u001b[0m" für ein blaues Tilde einfügen!)
+    }
+
+    // HILFSKLASSE: Berechnet ihre eigenen Rahmen- und T-Stücke perfekt passend zum Rest!
+    private static class UIBox {
+        int startX, startY, width, height;
+        char[][] content;
+
+        public UIBox(String text, String position, int gridW, int gridH) {
+            if (text == null || text.trim().isEmpty()) {
+                this.width = 0; this.height = 0; return;
+            }
+
+            String[] lines = text.replace("\r", "").split("\n");
+            int actualLines = Math.min(lines.length, 4); // Max 4 Zeilen
+            int maxLineLen = 0;
+
+            for (int i = 0; i < actualLines; i++) {
+                if (lines[i].length() > 10) lines[i] = lines[i].substring(0, 10); // Max 10 Zeichen
+                maxLineLen = Math.max(maxLineLen, lines[i].length());
+            }
+
+            this.width = maxLineLen + 2; // +2 für linken/rechten Box-Rand
+            this.height = actualLines + 2; // +2 für oberen/unteren Box-Rand
+            this.content = new char[height][width];
+
+            // Startposition berechnen
+            if (position.equals("TL")) { startX = 0; startY = 0; }
+            else if (position.equals("TR")) { startX = gridW - width; startY = 0; }
+            else if (position.equals("BL")) { startX = 0; startY = gridH - height; }
+            else if (position.equals("BR")) { startX = gridW - width; startY = gridH - height; }
+
+            // Nahtlose Ecken und T-Kreuzungen berechnen!
+            char cTL = '╭', cTR = '╮', cBL = '╰', cBR = '╯';
+            if (position.equals("TL")) { cTR = '┬'; cBL = '├'; cBR = '╯'; } // Innere Ecke ist ╯
+            if (position.equals("TR")) { cTL = '┬'; cBR = '┤'; cBL = '╰'; } // Innere Ecke ist ╰
+            if (position.equals("BL")) { cTL = '├'; cTR = '╮'; cBR = '┴'; } // Innere Ecke ist ╮
+            if (position.equals("BR")) { cTL = '╭'; cTR = '┤'; cBL = '┴'; } // Innere Ecke ist ╭
+
+            // Box zeichnen
+            for (int r = 0; r < height; r++) {
+                for (int c = 0; c < width; c++) {
+                    if (r == 0 && c == 0) content[r][c] = cTL;
+                    else if (r == 0 && c == width - 1) content[r][c] = cTR;
+                    else if (r == height - 1 && c == 0) content[r][c] = cBL;
+                    else if (r == height - 1 && c == width - 1) content[r][c] = cBR;
+                    else if (r == 0 || r == height - 1) content[r][c] = '─';
+                    else if (c == 0 || c == width - 1) content[r][c] = '│';
+                    else {
+                        String line = lines[r - 1];
+                        int charIdx = c - 1;
+                        if (charIdx < line.length()) {
+                            content[r][c] = line.charAt(charIdx);
+                        } else {
+                            content[r][c] = ' ';
+                        }
+                    }
+                }
+            }
+        }
+
+        public boolean contains(int x, int y) {
+            return width > 0 && x >= startX && x < startX + width && y >= startY && y < startY + height;
+        }
+
+        public char getChar(int x, int y) {
+            return content[y - startY][x - startX];
         }
     }
 
