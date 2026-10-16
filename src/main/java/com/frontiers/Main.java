@@ -6,6 +6,7 @@ public class Main {
         GameInitializer init = new GameInitializer();
         map.generateMap(5);
 
+        map.display();
         init.greeting();
         init.characterSelection();
     }

@@ -5,7 +5,7 @@ public class Player {
     private Faction playerFaction = Faction.NONE;
     private int turnPosition;
 
-    public void setPlayerName (String name) {
+    public void setPlayerName(String name) {
         playerName = name;
     }
 
@@ -33,7 +33,8 @@ public class Player {
     public String toString() {
         String color = playerFaction.getBackgroundColor().code + playerFaction.getPrimaryColor().code;
         String reset = Color.RESET.code;
+        String coloredName = color + this.getPlayerName() + reset;
 
-        return color + getPlayerName() + reset;
+        return coloredName;
     }
 }
