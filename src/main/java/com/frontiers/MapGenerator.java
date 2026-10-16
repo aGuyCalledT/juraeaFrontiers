@@ -1,3 +1,5 @@
+package com.frontiers;
+
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -13,7 +15,7 @@ public class MapGenerator {
         public int getMax(int totalTiles) { return (int) (totalTiles * maxPct); }
     }
 
-    public void generateMap(Map<String, HexTile> grid) {
+    public void generateMap(Map<HexCoordinate, HexTile> grid) {
         int totalTiles = grid.size();
         boolean isValidMap = false;
 
@@ -54,13 +56,13 @@ public class MapGenerator {
     }
 
 
-    private void resetGridToPlains(Map<String, HexTile> grid) {
+    private void resetGridToPlains(Map<HexCoordinate, HexTile> grid) {
         for (HexTile tile : grid.values()) {
             setTerrain(tile, LandType.PLANE);
         }
     }
 
-    private void generateOceans(Map<String, HexTile> grid) {
+    private void generateOceans(Map<HexCoordinate, HexTile> grid) {
         int OCEAN_PROBABILITY = 3;
 
         // PLACE EDGE OCEAN
@@ -71,7 +73,7 @@ public class MapGenerator {
         // FIND NEIGHBORS OF OCEAN
         List<HexTile> nextToOcean = new ArrayList<>();
         for (HexTile tile : grid.values()) {
-            if (tile.landType != LandType.OCEAN && hasNeighborOfType(tile, LandType.OCEAN)) {
+            if (tile.getLandType() != LandType.OCEAN && hasNeighborOfType(tile, LandType.OCEAN)) {
                 nextToOcean.add(tile);
             }
         }
@@ -82,7 +84,7 @@ public class MapGenerator {
         }
     }
 
-    private void growBiomeRandomly(Map<String, HexTile> grid, LandType biomeType, int targetSize, int numSeeds) {
+    private void growBiomeRandomly(Map<HexCoordinate, HexTile> grid, LandType biomeType, int targetSize, int numSeeds) {
         List<HexTile> allTiles = new ArrayList<>(grid.values());
         List<HexTile> frontier = new ArrayList<>();
         int currentSize = 0;
@@ -99,8 +101,8 @@ public class MapGenerator {
         expandFrontier(frontier, biomeType, currentSize, targetSize);
     }
 
-    private void growBiomeFromSeed(Map<String, HexTile> grid, LandType biomeType, int targetSize, HexTile seed) {
-        if (seed == null || seed.landType != LandType.PLANE) return;
+    private void growBiomeFromSeed(Map<HexCoordinate, HexTile> grid, LandType biomeType, int targetSize, HexTile seed) {
+        if (seed == null || seed.getLandType() != LandType.PLANE) return;
 
         List<HexTile> frontier = new ArrayList<>();
         setTerrain(seed, biomeType);
@@ -122,17 +124,17 @@ public class MapGenerator {
         }
     }
 
-    private void fixOrphanTiles(Map<String, HexTile> grid) {
+    private void fixOrphanTiles(Map<HexCoordinate, HexTile> grid) {
         boolean changed;
         do {
             changed = false;
             for (HexTile tile : grid.values()) {
                 // Ozeane lassen wir hier in Ruhe, falls sie isoliert sein dürfen
-                if (tile.landType == LandType.OCEAN) continue;
+                if (tile.getLandType() == LandType.OCEAN) continue;
 
-                if (countNeighborsOfType(tile, tile.landType) == 0) {
+                if (countNeighborsOfType(tile, tile.getLandType()) == 0) {
                     LandType majorityNeighborType = getMostCommonNeighborType(tile);
-                    if (majorityNeighborType != null && majorityNeighborType != tile.landType) {
+                    if (majorityNeighborType != null && majorityNeighborType != tile.getLandType()) {
                         setTerrain(tile, majorityNeighborType);
                         changed = true;
                     }
@@ -143,10 +145,10 @@ public class MapGenerator {
 
     /* --- HILFSMETHODEN & VALIDIERUNG --- */
 
-    private boolean validateMap(Map<String, HexTile> grid, int totalTiles, BiomeConfig... configs) {
+    private boolean validateMap(Map<HexCoordinate, HexTile> grid, int totalTiles, BiomeConfig... configs) {
         Map<LandType, Integer> counts = new EnumMap<>(LandType.class);
         for (HexTile tile : grid.values()) {
-            counts.merge(tile.landType, 1, Integer::sum);
+            counts.merge(tile.getLandType(), 1, Integer::sum);
         }
 
         for (BiomeConfig config : configs) {
@@ -158,15 +160,14 @@ public class MapGenerator {
         return true;
     }
 
-    private HexTile getCenterTile(Map<String, HexTile> grid) {
-        // Bei q und r Koordinaten ist 0,0 immer die exakte Mitte
-        return grid.get("0,0");
+    private HexTile getCenterTile(Map<HexCoordinate, HexTile> grid) {
+        return grid.get(new HexCoordinate(0, 0));
     }
 
     private HexTile findRandomValidSeed(List<HexTile> tiles, LandType biomeType) {
         Collections.shuffle(tiles, random);
         for (HexTile tile : tiles) {
-            if (tile.landType != LandType.PLANE) continue;
+            if (tile.getLandType() != LandType.PLANE) continue;
 
             // Verhindern, dass Wälder neben Wüsten spawnen und umgekehrt
             if (biomeType == LandType.DESERT && hasNeighborOfType(tile, LandType.FOREST)) continue;
@@ -178,7 +179,7 @@ public class MapGenerator {
     }
 
     private boolean isValidExpansion(HexTile tile, LandType biomeType) {
-        if (tile.landType != LandType.PLANE) return false;
+        if (tile.getLandType() != LandType.PLANE) return false;
         if (biomeType == LandType.FOREST && hasNeighborOfType(tile, LandType.DESERT)) return false;
         if (biomeType == LandType.DESERT && hasNeighborOfType(tile, LandType.FOREST)) return false;
 
@@ -191,7 +192,7 @@ public class MapGenerator {
 
     private void addValidNeighborsToFrontier(HexTile tile, List<HexTile> frontier, LandType biomeType) {
         for (HexTile neighbor : tile.neighbors.values()) {
-            if (neighbor.landType == LandType.PLANE && !frontier.contains(neighbor)) {
+            if (neighbor.getLandType() == LandType.PLANE && !frontier.contains(neighbor)) {
                 frontier.add(neighbor);
             }
         }
@@ -199,7 +200,7 @@ public class MapGenerator {
 
     private LandType getMostCommonNeighborType(HexTile tile) {
         return tile.neighbors.values().stream()
-                .map(n -> n.landType)
+                .map(n -> n.getLandType())
                 .collect(Collectors.groupingBy(t -> t, Collectors.counting()))
                 .entrySet().stream()
                 .max(Map.Entry.comparingByValue())
@@ -208,17 +209,15 @@ public class MapGenerator {
     }
 
     private boolean hasNeighborOfType(HexTile tile, LandType terrainType) {
-        return tile.neighbors.values().stream().anyMatch(n -> n.landType == terrainType);
+        return tile.neighbors.values().stream().anyMatch(n -> n.getLandType() == terrainType);
     }
 
     private int countNeighborsOfType(HexTile tile, LandType terrainType) {
-        return (int) tile.neighbors.values().stream().filter(n -> n.landType == terrainType).count();
+        return (int) tile.neighbors.values().stream().filter(n -> n.getLandType() == terrainType).count();
     }
 
     public void setTerrain(HexTile tile, LandType landType) {
-        tile.landType = landType;
-
-        // Keine versteckte Ozean-Logik mehr hier!
+        tile.setLandType(landType);
 
         // Farben resetten
         if (tile.occupiedBy == null || tile.occupiedBy == Faction.NONE) {

@@ -1,139 +1,141 @@
+package com.frontiers;
+
 import java.util.*;
 
 public class Display {
-        public static final String RESET = "\u001B[0m";
-        public static final String GREEN = "\u001B[32m";
-        public static final int BOX_WIDTH = 51;
+    public static final String RESET = "\u001B[0m";
+    public static final String GREEN = "\u001B[32m";
+    public static final int BOX_WIDTH = 51;
 
-        public enum BoxStyle {
-            NORMAL('─', '│', '┌', '┐', '└', '┘', '├', '┤', '┬', '┴'),
-            ROUND ('─', '│', '╭', '╮', '╰', '╯', '├', '┤', '┬', '┴'),
-            DOUBLE('═', '║', '╔', '╗', '╚', '╝', '╠', '╣', '╦', '╩');
+    public enum BoxStyle {
+        NORMAL('─', '│', '┌', '┐', '└', '┘', '├', '┤', '┬', '┴'),
+        ROUND ('─', '│', '╭', '╮', '╰', '╯', '├', '┤', '┬', '┴'),
+        DOUBLE('═', '║', '╔', '╗', '╚', '╝', '╠', '╣', '╦', '╩');
 
-            public final char h, v, tl, tr, bl, br, lt, rt, tt, bt;
+        public final char h, v, tl, tr, bl, br, lt, rt, tt, bt;
 
-            BoxStyle(char h, char v, char tl, char tr, char bl, char br, char lt, char rt, char tt, char bt) {
-                this.h = h; this.v = v;
-                this.tl = tl; this.tr = tr;
-                this.bl = bl; this.br = br;
-                this.lt = lt; this.rt = rt;
-                this.tt = tt; this.bt = bt;
+        BoxStyle(char h, char v, char tl, char tr, char bl, char br, char lt, char rt, char tt, char bt) {
+            this.h = h; this.v = v;
+            this.tl = tl; this.tr = tr;
+            this.bl = bl; this.br = br;
+            this.lt = lt; this.rt = rt;
+            this.tt = tt; this.bt = bt;
+        }
+
+        public static BoxStyle fromString(String style) {
+            if (style == null) return NORMAL;
+            switch (style.toLowerCase()) {
+                case "round":
+                case "rounded": return ROUND;
+                case "double": return DOUBLE;
+                default: return NORMAL;
+            }
+        }
+    }
+
+    public static void textBox(String text) {
+        textBox(text, "normal", "");
+    }
+
+    public static void textBox(String text, String title) {
+        textBox(text, "normal", title);
+    }
+
+    public static void textBox(String text, String styleName, String title) {
+        List<String> wrappedLines = new ArrayList<>();
+        String[] paragraphs = text.split("\r?\n", -1);
+        String activeColor = "";
+        java.util.regex.Pattern colorPattern = java.util.regex.Pattern.compile("\u001B\\[[;\\d]*m");
+
+        for (String paragraph : paragraphs) {
+            if (paragraph.isEmpty()) {
+                wrappedLines.add("");
+                continue;
             }
 
-            public static BoxStyle fromString(String style) {
-                if (style == null) return NORMAL;
-                switch (style.toLowerCase()) {
-                    case "round":
-                    case "rounded": return ROUND;
-                    case "double": return DOUBLE;
-                    default: return NORMAL;
-                }
-            }
-        }
+            String[] words = paragraph.split("\\s+");
+            StringBuilder currentLine = new StringBuilder();
+            int currentLength = 0;
 
-        public static void textBox(String text) {
-            textBox(text, "normal", "");
-        }
+            for (String word : words) {
+                if (word.isEmpty()) continue;
 
-        public static void textBox(String text, String title) {
-            textBox(text, "normal", title);
-        }
+                int wordLength = getVisibleLength(word);
 
-        public static void textBox(String text, String styleName, String title) {
-            List<String> wrappedLines = new ArrayList<>();
-            String[] paragraphs = text.split("\r?\n", -1);
-            String activeColor = "";
-            java.util.regex.Pattern colorPattern = java.util.regex.Pattern.compile("\u001B\\[[;\\d]*m");
-
-            for (String paragraph : paragraphs) {
-                if (paragraph.isEmpty()) {
-                    wrappedLines.add("");
-                    continue;
-                }
-
-                String[] words = paragraph.split("\\s+");
-                StringBuilder currentLine = new StringBuilder();
-                int currentLength = 0;
-
-                for (String word : words) {
-                    if (word.isEmpty()) continue;
-
-                    int wordLength = getVisibleLength(word);
-
-                    if (currentLength == 0 || currentLength + 1 + wordLength <= BOX_WIDTH) {
-                        if (currentLength > 0) {
-                            currentLine.append(" ");
-                            currentLength += 1;
-                        }
-                        currentLine.append(word);
-                        currentLength += wordLength;
-                    } else {
-                        wrappedLines.add(currentLine.toString() + RESET);
-                        currentLine = new StringBuilder();
-                        if (!activeColor.isEmpty() && !activeColor.equals(RESET)) {
-                            currentLine.append(activeColor);
-                        }
-                        currentLine.append(word);
-                        currentLength = wordLength;
+                if (currentLength == 0 || currentLength + 1 + wordLength <= BOX_WIDTH) {
+                    if (currentLength > 0) {
+                        currentLine.append(" ");
+                        currentLength += 1;
                     }
-
-                    java.util.regex.Matcher m = colorPattern.matcher(word);
-                    while (m.find()) {
-                        activeColor = m.group();
-                    }
-                }
-
-                if (currentLine.length() > 0) {
-                    wrappedLines.add(currentLine.toString() + RESET);
-                }
-            }
-
-            drawBox(title, "", BOX_WIDTH, null, styleName, wrappedLines.toArray(new String[0]));
-        }
-
-        public static void drawBox(String titleLeft, String titleRight, int innerWidth, String customBottom, String styleName, String... lines) {
-            BoxStyle style = BoxStyle.fromString(styleName);
-
-            int leftLen = getVisibleLength(titleLeft);
-            int rightLen = getVisibleLength(titleRight);
-            int dashCount = Math.max(0, innerWidth - leftLen - rightLen);
-            String hLine = String.valueOf(style.h);
-
-            StringBuilder top = new StringBuilder()
-                    .append(style.tl)
-                    .append(style.h)
-                    .append(titleLeft)
-                    .append(hLine.repeat(dashCount));
-
-            if (titleRight != null && !titleRight.isEmpty()) {
-                top.append(titleRight);
-            }
-
-            top.append(style.h).append(style.tr);
-            System.out.println(top.toString());
-
-            for (String line : lines) {
-                if (line.equals("DIVIDER")) {
-                    System.out.println(style.lt + hLine.repeat(innerWidth + 2) + style.rt);
-                } else if (line.startsWith("RAW:")) {
-                    System.out.println(line.substring(4));
+                    currentLine.append(word);
+                    currentLength += wordLength;
                 } else {
-                    int pad = Math.max(0, innerWidth - getVisibleLength(line));
-                    System.out.println(style.v + " " + line + " ".repeat(pad) + " " + style.v);
+                    wrappedLines.add(currentLine.toString() + RESET);
+                    currentLine = new StringBuilder();
+                    if (!activeColor.isEmpty() && !activeColor.equals(RESET)) {
+                        currentLine.append(activeColor);
+                    }
+                    currentLine.append(word);
+                    currentLength = wordLength;
+                }
+
+                java.util.regex.Matcher m = colorPattern.matcher(word);
+                while (m.find()) {
+                    activeColor = m.group();
                 }
             }
 
-            if (customBottom != null && !customBottom.isEmpty()) {
-                System.out.println(customBottom);
-            } else {
-                System.out.println(style.bl + hLine.repeat(innerWidth + 2) + style.br);
+            if (currentLine.length() > 0) {
+                wrappedLines.add(currentLine.toString() + RESET);
             }
         }
 
-        private static int getVisibleLength(String str) {
-            if (str == null) return 0;
-            return str.replaceAll("\u001B\\[[;\\d]*m", "").length();
+        drawBox(title, "", BOX_WIDTH, null, styleName, wrappedLines.toArray(new String[0]));
+    }
+
+    public static void drawBox(String titleLeft, String titleRight, int innerWidth, String customBottom, String styleName, String... lines) {
+        BoxStyle style = BoxStyle.fromString(styleName);
+
+        int leftLen = getVisibleLength(titleLeft);
+        int rightLen = getVisibleLength(titleRight);
+        int dashCount = Math.max(0, innerWidth - leftLen - rightLen);
+        String hLine = String.valueOf(style.h);
+
+        StringBuilder top = new StringBuilder()
+                .append(style.tl)
+                .append(style.h)
+                .append(titleLeft)
+                .append(hLine.repeat(dashCount));
+
+        if (titleRight != null && !titleRight.isEmpty()) {
+            top.append(titleRight);
         }
+
+        top.append(style.h).append(style.tr);
+        System.out.println(top.toString());
+
+        for (String line : lines) {
+            if (line.equals("DIVIDER")) {
+                System.out.println(style.lt + hLine.repeat(innerWidth + 2) + style.rt);
+            } else if (line.startsWith("RAW:")) {
+                System.out.println(line.substring(4));
+            } else {
+                int pad = Math.max(0, innerWidth - getVisibleLength(line));
+                System.out.println(style.v + " " + line + " ".repeat(pad) + " " + style.v);
+            }
+        }
+
+        if (customBottom != null && !customBottom.isEmpty()) {
+            System.out.println(customBottom);
+        } else {
+            System.out.println(style.bl + hLine.repeat(innerWidth + 2) + style.br);
+        }
+    }
+
+    private static int getVisibleLength(String str) {
+        if (str == null) return 0;
+        return str.replaceAll("\u001B\\[[;\\d]*m", "").length();
+    }
 
     public static void displayMap(HexMap map, String strTL, String strTR, String strBL, String strBR) {
         int radius = map.getRadius();
@@ -182,7 +184,8 @@ public class Display {
 
                 // C) HexTiles rendern
                 for (int q = qStart; q <= qEnd; q++) {
-                    HexTile tile = map.getTileGrid().get(q + "," + r);
+                    // *** HIER IST DIE WICHTIGSTE ÄNDERUNG ***
+                    HexTile tile = map.getTile(q, r);
                     if (tile == null) {
                         for (int i = 0; i < tileWidth; i++) {
                             System.out.print(getGridChar(currentX, y, gridW, gridH, tl, tr, bl, br));
@@ -225,7 +228,8 @@ public class Display {
         if (y == 0 || y == gridH - 1) return "─";
         if (x == 0 || x == gridW - 1) return "│";
 
-        return LandType.OCEAN.getDefaultDisplayColor().code + "~" + Color.RESET.code; // Ozean (Du kannst hier auch z.B. "\u001b[34m~\u001b[0m" für ein blaues Tilde einfügen!)
+        // *** HIER IST DIE FARB-ANPASSUNG ***
+        return "\u001b[38;2;138;173;244m~\u001b[0m"; // Catppuccin Macchiato Blau
     }
 
     // HILFSKLASSE: Berechnet ihre eigenen Rahmen- und T-Stücke perfekt passend zum Rest!
@@ -351,6 +355,4 @@ public class Display {
 
         return result.toString();
     }
-
-
 }

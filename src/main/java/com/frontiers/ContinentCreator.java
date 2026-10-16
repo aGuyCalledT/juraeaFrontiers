@@ -1,3 +1,5 @@
+package com.frontiers;
+
 public class ContinentCreator {
     public static void createContinent(HexMap map){
         int requiredContinentNumb = 3;

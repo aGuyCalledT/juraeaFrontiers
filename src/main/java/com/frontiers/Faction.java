@@ -1,9 +1,10 @@
+package com.frontiers;
 import java.util.Arrays;
 
 public enum Faction {
     NECROMANCERS(
             "NECRO",
-            "Nekromanten",
+            "Necromancers",
             "N",
             Color.BLACK,
             Color.BG_PURPLE,
@@ -11,7 +12,7 @@ public enum Faction {
     ),
     ELVES(
             "ELF",
-            "Elfen",
+            "Elves",
             "E",
             Color.BLACK,
             Color.BG_GREEN,
@@ -19,7 +20,7 @@ public enum Faction {
     ),
     GIANTS(
             "GIANT",
-            "Riesen",
+            "Giants",
             "G",
             Color.BLACK,
             Color.BG_YELLOW,
@@ -29,9 +30,9 @@ public enum Faction {
             "NONE",
             "Neutral",
             "  ",
-            Color.RED,
-            Color.BG_RED,
-            Color.RED
+            Color.BLACK,
+            Color.BG_WHITE,
+            Color.BLACK
     );
 
     private final String code;

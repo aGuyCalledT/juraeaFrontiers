@@ -1,8 +1,10 @@
+package com.frontiers;
+
 import java.util.HashMap;
 import java.util.Map;
 
 public class HexMap {
-    public Map<String, HexTile> tileGrid = new HashMap<>();
+    public Map<HexCoordinate, HexTile> tileGrid = new HashMap<>();
     private int radius;
 
     public void generateMap(int radius) {
@@ -14,7 +16,7 @@ public class HexMap {
             int r2 = Math.min(radius, -q + radius);
             for (int r = r1; r <= r2; r++) {
                 HexTile tile = new HexTile(q, r, null, null, Color.WHITE, Color.BG_YELLOW);
-                tileGrid.put(tile.getKey(), tile);
+                tileGrid.put(tile.getCoordinates(), tile);
             }
         }
 
@@ -23,7 +25,7 @@ public class HexMap {
             for (HexDirection dir : HexDirection.values()) {
                 int neighborQ = tile.q + dir.dq;
                 int neighborR = tile.r + dir.dr;
-                HexTile neighborTile = tileGrid.get(neighborQ + "," + neighborR);
+                HexTile neighborTile = tileGrid.get(new HexCoordinate(neighborQ, neighborR));
 
                 if (neighborTile != null) {
                     tile.neighbors.put(dir, neighborTile);
@@ -49,15 +51,17 @@ public class HexMap {
     public void display(){
         Display.displayMap(this, "", "", "", "");
     }
+
     // GETTER
     public HexTile getTile(int q, int r) {
-        return tileGrid.get(q + "," + r);
+        return tileGrid.get(new HexCoordinate(q, r));
     }
 
     public int getRadius(){
         return this.radius;
     }
-    public Map<String, HexTile> getTileGrid(){
+
+    public Map<HexCoordinate, HexTile> getTileGrid(){
         return this.tileGrid;
     }
 }

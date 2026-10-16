@@ -1,3 +1,5 @@
+package com.frontiers;
+
 import java.util.ArrayList;
 import java.util.List;
 
@@ -5,16 +7,14 @@ public class Troop {
     private String troopName;
     private Faction faction;
     private List<Unit> units;
-    
-    private int q;
-    private int r;
+
+    private HexCoordinate position;
 
     public Troop(String troopName, Faction faction, int startQ, int startR) {
         this.troopName = troopName;
         this.faction = faction;
         this.units = new ArrayList<>();
-        this.q = startQ;
-        this.r = startR;
+        this.position = new HexCoordinate(startQ, startR);
     }
 
     public void addUnit(Unit unit) {
@@ -56,14 +56,14 @@ public class Troop {
                 .sum();
     }
 
-    public int getQ() { return q; }
-    public int getR() { return r; }
+    public int getQ() { return position.q(); }
+    public int getR() { return position.r(); }
+    public HexCoordinate getPosition() { return position; }
 
     public void setPosition(int q, int r) {
-        this.q = q;
-        this.r = r;
+        this.position = new HexCoordinate(q, r);
     }
-    
+
     public String getTroopName() { return troopName; }
     public Faction getFaction() { return faction; }
     public List<Unit> getUnits() { return units; }
@@ -78,5 +78,4 @@ public class Troop {
             recruit(type);
         }
     }
-
 }

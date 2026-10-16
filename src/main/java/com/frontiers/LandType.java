@@ -1,3 +1,5 @@
+package com.frontiers;
+
 public enum LandType {
     PLANE("♣_________", Color.GREEN, Color.BG_GRAY),
     FOREST("♠♣⇞↟", Color.GREEN, Color.BG_GRAY),

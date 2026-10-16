@@ -1,3 +1,5 @@
+package com.frontiers;
+
 import java.util.EnumSet;
 import java.util.Set;
 

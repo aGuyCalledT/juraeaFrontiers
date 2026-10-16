@@ -1,3 +1,5 @@
+package com.frontiers;
+
 public enum HexDirection {
     NORTH_WEST(-1, 0),
     NORTH_EAST(0, -1),

@@ -1,3 +1,5 @@
+package com.frontiers;
+
 public enum Color {
     // --- RESET ---
     RESET("\033[0m"),

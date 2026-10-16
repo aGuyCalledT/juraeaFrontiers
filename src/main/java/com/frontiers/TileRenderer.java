@@ -1,3 +1,5 @@
+package com.frontiers;
+
 import java.util.Objects;
 import java.util.Random;
 
@@ -7,7 +9,7 @@ public class TileRenderer {
     private static final String DEFAULT_BG = "\u001B[49m";
 
     public static String renderTile(HexTile tile, int lineIndex) {
-        if (tile.landType == LandType.OCEAN) {
+        if (tile.getLandType() == LandType.OCEAN) {
             String lineText = "";
             for (int i = 0; i < TILE_WIDTH; i ++) {
                 lineText += LandType.OCEAN.getSymbolPool().charAt(0);
@@ -54,7 +56,7 @@ public class TileRenderer {
     }
 
     private static String getBaseTerrainPattern(HexTile tile, int lineIndex) {
-        String pool = tile.landType.getSymbolPool();
+        String pool = tile.getLandType().getSymbolPool();
         if (pool == null || pool.isEmpty()) {
             pool = " ";
         }

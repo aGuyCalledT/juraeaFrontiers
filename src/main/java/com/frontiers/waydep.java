@@ -1,4 +1,4 @@
-package testing;
+package com.frontiers;
 
 public class waydep {
 

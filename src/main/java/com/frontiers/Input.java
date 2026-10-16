@@ -1,3 +1,5 @@
+package com.frontiers;
+
 import java.util.Scanner;
 import java.util.function.Function;
 
@@ -32,6 +34,72 @@ public class Input {
             if (s.isEmpty()) throw new IllegalArgumentException("ERROR: input may not be empty");
             return s;
         });
+    }
+
+    public static String getString(String... allowedOptions) {
+        if (allowedOptions == null || allowedOptions.length == 0) {
+            return getString();
+        }
+
+        return getInput(s -> {
+            if (s.isEmpty()) throw new IllegalArgumentException("ERROR: input may not be empty");
+
+            String lowerInput = s.toLowerCase();
+            String bestMatch = null;
+            int minDistance = Integer.MAX_VALUE;
+
+            for (String option : allowedOptions) {
+                String lowerOption = option.toLowerCase();
+
+                if (lowerOption.equals(lowerInput)) {
+                    return option;
+                }
+
+                // 2. Tippfehler berechnen
+                int distance = calculateLevenshteinDistance(lowerInput, lowerOption);
+                if (distance < minDistance) {
+                    minDistance = distance;
+                    bestMatch = option;
+                }
+            }
+
+            // Toleranz-Level festlegen:
+            // 1 Tippfehler bei kurzen Wörtern, 2 bei Wörtern ab 5 Buchstaben erlaubt
+            int allowedDistance = (bestMatch != null && bestMatch.length() > 4) ? 2 : 1;
+
+            if (minDistance <= allowedDistance) {
+                System.out.println("Did you mean \"" + bestMatch + "\"?");
+                boolean acceptMatch = getBoolean();
+                if (acceptMatch) {
+                    return bestMatch;
+                }
+            }
+
+            // Wenn nichts gepasst hat, werfe Fehler mit den erlaubten Optionen
+            String optionsStr = String.join(", ", allowedOptions);
+            throw new IllegalArgumentException("input has to be one of the following: " + optionsStr);
+        });
+    }
+
+    private static int calculateLevenshteinDistance(String a, String b) {
+        int[][] dp = new int[a.length() + 1][b.length() + 1];
+
+        for (int i = 0; i <= a.length(); i++) {
+            for (int j = 0; j <= b.length(); j++) {
+                if (i == 0) {
+                    dp[i][j] = j;
+                } else if (j == 0) {
+                    dp[i][j] = i;
+                } else {
+                    int cost = (a.charAt(i - 1) == b.charAt(j - 1)) ? 0 : 1;
+                    dp[i][j] = Math.min(
+                            Math.min(dp[i - 1][j] + 1, dp[i][j - 1] + 1), // Einfügen oder Löschen
+                            dp[i - 1][j - 1] + cost                       // Ersetzen
+                    );
+                }
+            }
+        }
+        return dp[a.length()][b.length()];
     }
 
     public static char getChar() {

@@ -1,3 +1,5 @@
+package com.frontiers;
+
 public class UnitCreator {
 
     public static Unit create(Faction faction, UnitType type) {
@@ -14,17 +16,17 @@ public class UnitCreator {
                 movement = 1;
                 moral = 1;
                 switch (faction) {
-                    case Faction.GIANTS:
+                    case GIANTS:
                         name = "iron gut";
                         hitPoints = 2;
                         armorClass = 12;
                         attackDamage = 2;
                         break;
-                    case Faction.ELVES:
+                    case ELVES:
                         name = "warrior";
                         moral = 2;
                         break;
-                    case Faction.NECROMANCERS:
+                    case NECROMANCERS:
                         name = "skeleton";
                         armorClass = 8;
                         break;
@@ -32,30 +34,30 @@ public class UnitCreator {
                 break;
             case CAVALRY:
                 switch (faction) {
-                    case Faction.GIANTS:
+                    case GIANTS:
                         name = "horn rider";
                         armorClass = 15;
                         attackDamage = 4;
                         movement = 2;
                         break;
-                    case Faction.ELVES:
+                    case ELVES:
                         name = "eagle rider";
                         moral = 4;
                         break;
-                    case Faction.NECROMANCERS:
+                    case NECROMANCERS:
                         name = "death knight";
                         break;
                 }
                 break;
             case SPECIAL:
                 switch (faction) {
-                    case Faction.GIANTS:
+                    case GIANTS:
                         name = "shaman";
                         break;
-                    case Faction.ELVES:
+                    case ELVES:
                         name = "wizzard";
                         break;
-                    case Faction.NECROMANCERS:
+                    case NECROMANCERS:
                         name = "death priest";
                         break;
                 }
