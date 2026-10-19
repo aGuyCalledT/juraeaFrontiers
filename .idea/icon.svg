@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="iso-8859-1"?>
+<svg version="1.1" id="Layer_1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" x="0px" y="0px"
+     viewBox="0 0 512 512" style="enable-background:new 0 0 512 512;" xml:space="preserve">
+<polygon style="fill:#FFDA45;" points="256,388.847 132.847,512 379.153,512 "/>
+    <polygon style="fill:#FFAD42;" points="256,388.847 256,512 379.153,512 "/>
+    <g>
+	<rect x="236.8" y="224" style="fill:#FFDA45;" width="38.4" height="89.6"/>
+        <path style="fill:#FFDA45;" d="M93.257,0v90.563c0,89.736,73.006,162.743,162.743,162.743S418.743,180.3,418.743,90.563V0H93.257z"
+        />
+</g>
+    <path style="fill:#FFAD42;" d="M256,253.306c89.737,0,162.743-73.006,162.743-162.743V0H256"/>
+    <circle style="fill:#EE5D5D;" cx="352" cy="64" r="19.2"/>
+    <circle style="fill:#EE7C7C;" cx="160" cy="64" r="19.2"/>
+    <circle style="fill:#C98936;" cx="256" cy="64" r="19.2"/>
+    <path style="fill:#FFAD42;" d="M97.61,128c3.197,13.527,8.09,26.404,14.435,38.4h287.91c6.346-11.996,11.238-24.873,14.435-38.4
+	H97.61z"/>
+    <path style="fill:#C98936;" d="M256,128v38.4h143.955c6.346-11.996,11.238-24.873,14.435-38.4H256z"/>
+    <path style="fill:#FFAD42;" d="M256,294.4c-31.761,0-57.6,25.839-57.6,57.6s25.839,57.6,57.6,57.6s57.6-25.839,57.6-57.6
+	S287.761,294.4,256,294.4z"/>
+    <path style="fill:#C98936;" d="M256,409.6c31.761,0,57.6-25.839,57.6-57.6s-25.839-57.6-57.6-57.6"/>
+    <circle style="fill:#EE5D5D;" cx="256" cy="352" r="19.2"/>
+</svg>

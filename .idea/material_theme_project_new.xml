@@ -4,8 +4,12 @@
     <option name="metadata">
       <MTProjectMetadataState>
         <option name="applicationFrameMigrated" value="true" />
+        <option name="pristineConfig" value="false" />
         <option name="userId" value="-7b415b4a:1a1435f22b0:-7ff4" />
       </MTProjectMetadataState>
+    </option>
+    <option name="tabsState">
+      <MTProjectTabsConfigState />
     </option>
   </component>
 </project>
