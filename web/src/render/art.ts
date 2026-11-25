@@ -11,6 +11,7 @@ export const TERRAIN_COLORS: Record<Terrain, { top: string; light: string; side:
   plains: { top: '#9ccf45', light: '#c4e86a', side: '#5f8f25', deep: '#466d1a' },
   forest: { top: '#4f9a3a', light: '#74bd4c', side: '#2e6424', deep: '#214b1a' },
   mountain: { top: '#a7a096', light: '#c9c3b8', side: '#6c665e', deep: '#504b45' },
+  peak: { top: '#8f8a93', light: '#e9edf3', side: '#5d5862', deep: '#433f47' },
   desert: { top: '#f0cb6b', light: '#ffe49a', side: '#b98a33', deep: '#8f6a25' },
   water: { top: '#3fb0d4', light: '#7fd3ea', side: '#1f7fa8', deep: '#16618a' },
 };
@@ -202,6 +203,35 @@ export const SYMBOLS = `
   <path d="M50 40 L50 12" stroke="${INK}" stroke-width="5" stroke-linecap="round"/>
   <path d="M51 12 L72 18 L51 25 Z" fill="currentColor" ${S4}/>
 </symbol>
+<symbol id="s-peak" viewBox="0 0 100 100">
+  <path d="M2 96 L34 30 Q42 16 48 26 L54 34 L62 12 Q68 2 74 12 L98 96 Z" fill="#7e7884" ${S}/>
+  <path d="M68 6 Q72 8 74 12 L98 96 L60 96 L70 50 Z M46 24 L54 34 L48 96 L36 96 L44 48 Z" fill="#5d5862" opacity=".8"/>
+  <path d="M52 40 L62 12 Q68 2 74 12 L82 36 L74 32 L68 40 L62 32 Z M26 48 L34 30 Q42 16 48 26 L54 36 L46 34 L40 42 L34 36 Z" fill="#fbfcff" ${S4}/>
+  <path d="M10 88 Q30 80 50 86 Q72 80 92 88" stroke="#e9edf3" stroke-width="5" fill="none" stroke-linecap="round" opacity=".7"/>
+</symbol>
+<symbol id="s-farm" viewBox="0 0 100 100">
+  <path d="M38 94 L42 50 L58 50 L62 94 Z" fill="#f3ead2" ${S}/>
+  <path d="M36 52 L50 34 L64 52 Z" fill="#c94f3a" ${S}/>
+  <path d="M46 94 L46 80 Q50 74 54 80 L54 94 Z" fill="#7a4a26" ${S4}/>
+  <g transform="translate(50 42)"><path d="M0 0 L-6 -38 L6 -38 Z M0 0 L38 -6 L38 6 Z M0 0 L6 38 L-6 38 Z M0 0 L-38 6 L-38 -6 Z" fill="#fffdf5" ${S4}/><circle r="5" fill="#ffd23f" ${S4}/></g>
+</symbol>
+<symbol id="s-mine" viewBox="0 0 100 100">
+  <path d="M14 94 Q14 46 50 42 Q86 46 86 94 Z" fill="#8f8a85" ${S}/>
+  <path d="M32 94 L32 66 Q50 52 68 66 L68 94 Z" fill="#2b2026" ${S4}/>
+  <path d="M30 66 L70 66 M36 66 L36 94 M64 66 L64 94" stroke="#8a5a2b" stroke-width="6" stroke-linecap="round"/>
+  <path d="M40 90 L60 90 L56 80 L44 80 Z" fill="#ffd23f" ${S4}/>
+</symbol>
+<symbol id="s-lumber" viewBox="0 0 100 100">
+  <path d="M12 94 L88 94 L88 78 L12 78 Z M20 78 L80 78 L80 62 L20 62 Z M30 62 L70 62 L70 46 L30 46 Z" fill="#a46c36" ${S}/>
+  <circle cx="12" cy="86" r="7" fill="#f2c97a" ${S4}/><circle cx="20" cy="70" r="7" fill="#f2c97a" ${S4}/><circle cx="30" cy="54" r="7" fill="#f2c97a" ${S4}/>
+  <path d="M66 40 L84 18" stroke="${INK}" stroke-width="7" stroke-linecap="round"/><path d="M80 12 L92 22 L84 28 Z" fill="#c9cdd2" ${S4}/>
+</symbol>
+<symbol id="s-well" viewBox="0 0 100 100">
+  <ellipse cx="50" cy="80" rx="30" ry="14" fill="#b3a998" ${S}/>
+  <ellipse cx="50" cy="76" rx="20" ry="8" fill="#4fb8e0" ${S4}/>
+  <path d="M22 76 L22 36 M78 76 L78 36" stroke="${INK}" stroke-width="7" stroke-linecap="round"/><path d="M22 76 L22 36 M78 76 L78 36" stroke="#8a5a2b" stroke-width="3"/>
+  <path d="M14 40 L50 18 L86 40 Z" fill="#c94f3a" ${S}/>
+</symbol>
 <symbol id="s-star" viewBox="0 0 100 100">
   <path d="M50 8 L62 38 L94 40 L69 60 L78 92 L50 74 L22 92 L31 60 L6 40 L38 38 Z" fill="#ffd23f" ${S}/>
 </symbol>
@@ -242,6 +272,10 @@ export function decorations(t: Tile, hasBuilding = false): string {
       for (const [x, y] of pick) items.push([r() < 0.55 ? 's-pine' : 's-tree', j(x), j(y), 28 + r() * 8]);
       break;
     }
+    case 'peak': {
+      items.push(['s-peak', 0, 8, 96]);
+      break;
+    }
     case 'mountain': {
       if (hasBuilding) {
         items.push(['s-hill', -36, 4, 30], ['s-hill', 36, 2, 26]);
@@ -278,3 +312,5 @@ export function decorations(t: Tile, hasBuilding = false): string {
 export function castleId(f: FactionId): string {
   return `s-castle-${f}`;
 }
+
+export const IMPROVEMENT_SYMBOL: Record<string, string> = { plains: 's-farm', forest: 's-lumber', mountain: 's-mine', desert: 's-well' };

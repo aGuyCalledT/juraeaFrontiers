@@ -2,7 +2,7 @@ import type { UnitType } from './unitstats';
 
 export type FactionId = 'necro' | 'elves' | 'giants';
 export type Owner = FactionId | 'neutral';
-export type Terrain = 'plains' | 'forest' | 'mountain' | 'desert' | 'water';
+export type Terrain = 'plains' | 'forest' | 'mountain' | 'peak' | 'desert' | 'water';
 export type Phase = 'play' | 'over';
 export type SlotKind = 'human' | 'ai' | 'off';
 
@@ -15,6 +15,8 @@ export interface Tile {
   /** Last side that stood here (null = nobody yet, also for water). */
   owner: Owner | null;
   enchanted: boolean;
+  /** Improvement level 0..2, each +1 gold per turn. */
+  improved: number;
   deco: number;
 }
 
@@ -31,6 +33,8 @@ export interface Army {
   units: Unit[];
   mp: number;
   attacked: boolean;
+  /** Could not pay upkeep: -1 attack and defence until upkeep is paid again. */
+  lowMorale: boolean;
 }
 
 export interface City {
@@ -45,8 +49,17 @@ export interface City {
 export interface Build {
   tile: number;
   owner: FactionId;
-  kind: 'city' | 'upgrade';
+  kind: 'city' | 'upgrade' | 'improve';
   turnsLeft: number;
+}
+
+/** A fight waiting for the attacker to choose round 2 or retreat. */
+export interface PendingFight {
+  army: number;
+  target: number;
+  /** Units killed so far (for the necromancers' rolls at the end). */
+  deaths: number;
+  necroPriests: number;
 }
 
 export interface Region {
@@ -75,7 +88,7 @@ export interface GameSetup {
 }
 
 export interface GameState {
-  version: 2;
+  version: 3;
   setup: GameSetup;
   rng: number;
   radius: number;
@@ -91,6 +104,7 @@ export interface GameState {
   nextId: number;
   winner: FactionId | null;
   actionCount: number;
+  pendingFight: PendingFight | null;
 }
 
 export type Action =
@@ -102,6 +116,9 @@ export type Action =
   | { type: 'build'; p: FactionId; army: number }
   | { type: 'upgrade'; p: FactionId; city: number }
   | { type: 'enchant'; p: FactionId; army: number }
+  | { type: 'improve'; p: FactionId; tile: number }
+  | { type: 'dismiss'; p: FactionId; army: number; units: number[] }
+  | { type: 'fight'; p: FactionId; choice: 'continue' | 'retreat' }
   | { type: 'endTurn'; p: FactionId };
 
 export interface CombatDie {
@@ -147,7 +164,13 @@ export interface CombatEvent {
   dead: number[]; // unit ids
   raise: RaiseResult | null;
   defenderWiped: boolean;
+  attackerWiped: boolean;
   terrainBonus: string[];
+  attackMods: string[];
+  round: 1 | 2;
+  /** True when the fight is over after this round (round 2, or a side was wiped out). */
+  final: boolean;
+  bounty: { att: number; def: number };
 }
 
 export type GameEvent =
@@ -156,8 +179,13 @@ export type GameEvent =
   | { type: 'split'; p: FactionId; army: number; newArmy: number; tile: number }
   | { type: 'merged'; p: FactionId; army: number; tile: number }
   | { type: 'recruited'; p: FactionId; city: number; unit: UnitType; army: number }
-  | { type: 'buildStarted'; p: FactionId; tile: number; kind: 'city' | 'upgrade' }
-  | { type: 'built'; p: FactionId; tile: number; kind: 'city' | 'upgrade'; level: number }
+  | { type: 'buildStarted'; p: FactionId; tile: number; kind: 'city' | 'upgrade' | 'improve' }
+  | { type: 'built'; p: FactionId; tile: number; kind: 'city' | 'upgrade' | 'improve'; level: number }
+  | { type: 'retreat'; p: FactionId; army: number; target: number }
+  | { type: 'raised'; p: FactionId; raise: RaiseResult; tile: number }
+  | { type: 'dismissed'; p: FactionId; army: number; units: number; refund: number }
+  | { type: 'upkeep'; p: FactionId; paid: number; unpaid: number; armies: number[] }
+  | { type: 'pillaged'; p: FactionId; tile: number; gold: number }
   | { type: 'enchanted'; p: FactionId; tile: number }
   | { type: 'healed'; p: FactionId; units: { army: number; unit: number; by: 'city' | 'mammoth' }[] }
   | { type: 'siege'; p: FactionId; city: number; rounds: number; needed: number }
@@ -168,7 +196,12 @@ export type GameEvent =
 
 export interface Income {
   gold: number;
-  tiles: number;
+  plains: number;
+  mountains: number;
+  forests: number;
   cities: number;
+  coastal: number;
+  improvements: number;
   enchanted: number;
+  upkeep: number;
 }

@@ -4,7 +4,7 @@ import {
   pathTo, reachable, validate,
 } from './rules';
 import type { Action, Army, FactionId, GameState } from './types';
-import { CITY_COST, FACTION_UNITS, MAX_CITY_LEVEL, UNIT_STATS, UPGRADE_COST, unitCost } from './unitstats';
+import { ARMY_FREE_SIZE, CITY_COST, FACTION_UNITS, IMPROVE_COST, MAX_CITY_LEVEL, MAX_IMPROVE, UNIT_STATS, UPGRADE_COST, unitCost } from './unitstats';
 
 // Armies the AI has finished with this turn (AI runs on one machine only).
 let doneKey = '';
@@ -45,11 +45,30 @@ export function aiNextAction(s: GameState): Action {
   const enemyCities = s.cities.filter((c) => c.owner !== f);
   const myPower = mine.reduce((n, a) => n + armyStrength(a.units, 'att'), 0);
 
+  // 0. A fight is waiting: press on if we still have the upper hand.
+  if (s.pendingFight) {
+    const pf = s.pendingFight;
+    const att = mine.find((a) => a.id === pf.army);
+    const theirs = defStrength(s, pf.target, armiesAt(s, pf.target).find((a) => a.owner !== f)?.owner ?? 'neutral');
+    const ratio = att ? armyStrength(att.units, 'att') / Math.max(1, theirs) : 0;
+    return { type: 'fight', p: f, choice: ratio >= 0.9 ? 'continue' : 'retreat' };
+  }
+
   // 1. Merge armies sharing a hex once they have nothing left to attack.
   for (const a of mine) {
     if (cityAt(s, a.tile)) continue;
     const here = armiesAt(s, a.tile).filter((x) => x.owner === f);
-    if (here.length === 2 && here.every((x) => !attackTargets(s, x).length)) return { type: 'merge', p: f, tile: a.tile };
+    if (here.length === 2 && here.every((x) => !attackTargets(s, x).length) && here[0].units.length + here[1].units.length <= ARMY_FREE_SIZE) {
+      return { type: 'merge', p: f, tile: a.tile };
+    }
+  }
+
+  // 1a. Oversized armies cost upkeep: split the extra units off.
+  for (const a of mine) {
+    if (a.units.length <= ARMY_FREE_SIZE || armiesAt(s, a.tile).filter((x) => x.owner === f).length >= 2) continue;
+    const extra = [...a.units].sort((x, y) => UNIT_STATS[x.type].tier - UNIT_STATS[y.type].tier).slice(0, a.units.length - ARMY_FREE_SIZE).map((u) => u.id);
+    const act = legal(s, { type: 'split', p: f, army: a.id, units: extra });
+    if (act) return act;
   }
 
   // 1b. Big armies next to enemies split, because every army may attack once per turn.
@@ -105,6 +124,19 @@ export function aiNextAction(s: GameState): Action {
     }
   }
 
+  // 4b. Improve land with spare gold: plains and mountains first.
+  if (p.gold >= IMPROVE_COST[0] + unitCost(FACTION_UNITS[f][0])) {
+    const spots = s.tiles
+      .filter((t) => t.owner === f && t.improved < MAX_IMPROVE && !cityAt(s, t.id) && !s.builds.some((b) => b.tile === t.id))
+      .filter((t) => p.gold >= IMPROVE_COST[t.improved] + unitCost(FACTION_UNITS[f][0]))
+      .filter((t) => !nb[t.id].some((n) => armiesAt(s, n).some((a) => a.owner !== f && a.owner !== 'neutral')))
+      .sort((a, b) => a.improved - b.improved || (a.terrain === 'forest' || a.terrain === 'desert' ? 1 : 0) - (b.terrain === 'forest' || b.terrain === 'desert' ? 1 : 0));
+    if (spots.length) {
+      const act = legal(s, { type: 'improve', p: f, tile: spots[0].id });
+      if (act) return act;
+    }
+  }
+
   // 5. Druids enchant their forest.
   if (f === 'elves') {
     for (const a of mine) {
@@ -127,13 +159,6 @@ export function aiNextAction(s: GameState): Action {
     const mv = bestMove(s, army, focus ? [focus.tile] : [], enemyCities.map((c) => c.tile), myPower);
     if (mv) return mv;
     done.add(army.id);
-  }
-  // Recruits still inside a city must leave before the turn can end.
-  for (const army of mine) {
-    if (!cityAt(s, army.tile)) continue;
-    const reach = reachable(s, army);
-    const exit = [...reach].find(([t, r]) => r.stop && !cityAt(s, t));
-    if (exit) return { type: 'move', p: f, army: army.id, path: pathTo(reach, exit[0]) };
   }
   return { type: 'endTurn', p: f };
 }

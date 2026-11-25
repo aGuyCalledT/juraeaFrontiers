@@ -2,9 +2,10 @@ import { FACTIONS, NEUTRAL } from '../engine/factions';
 import { HEX_SIZE, SQRT3, hexCorners, hexToPixel, key } from '../engine/hex';
 import { neighbors } from '../engine/rules';
 import type { GameState, Tile } from '../engine/types';
-import { BADGE_PATH, INK, TERRAIN_COLORS, castleId, decorations, use } from './art';
+import { BADGE_PATH, IMPROVEMENT_SYMBOL, INK, TERRAIN_COLORS, castleId, decorations, use } from './art';
+import { defenseBonus } from '../engine/rules';
 import type { Army, FactionId } from '../engine/types';
-import { UNIT_STATS } from '../engine/unitstats';
+import { ARMY_FREE_SIZE, UNIT_STATS } from '../engine/unitstats';
 
 const NS = 'http://www.w3.org/2000/svg';
 const pts = (p: [number, number][]) => p.map(([x, y]) => `${x.toFixed(1)},${y.toFixed(1)}`).join(' ');
@@ -191,7 +192,7 @@ export class Board {
       const armies = state.armies.filter((a) => a.tile === t.id);
       const city = state.cities.find((c) => c.tile === t.id);
       const build = state.builds.find((b) => b.tile === t.id);
-      const sig = JSON.stringify([t.terrain, t.owner, t.enchanted, armies.map((a) => [a.id, a.owner, a.mp, a.attacked, a.units.map((u) => u.type + u.hp)]), city, build, cur]);
+      const sig = JSON.stringify([t.terrain, t.owner, t.enchanted, t.improved, armies.map((a) => [a.id, a.owner, a.mp, a.attacked, a.lowMorale, a.units.map((u) => u.type + u.hp)]), city, build, cur, city && armies.length]);
       if (!force && sig === v.last) continue;
       v.last = sig;
       changed.push(t.id);
@@ -215,23 +216,28 @@ export class Board {
       if (t.enchanted) b += use('s-sparkle', -30, -24, 22) + use('s-sparkle', 32, -6, 16);
       if (city) {
         const cf = FACTIONS[city.owner];
-        b += use(castleId(city.owner), 0, city.capital ? -2 : -6, city.capital ? 64 : 54, `style="color:${cf.color}"`);
+        b += use(castleId(city.owner), 0, armies.length ? -14 : city.capital ? -2 : -6, city.capital ? 64 : 54, `style="color:${cf.color}"`);
         for (let i = 0; i < city.level; i++) b += use('s-star', -14 + i * 14 - (city.level - 1) * 0, -60, 16);
       } else if (build?.kind === 'city') {
         b += use('s-scaffold', 0, -4, 54, `style="color:${FACTIONS[build.owner].color}"`);
       }
-      if (fac && !city && !build && !armies.length) b += use('s-flag', 34, -10, 30, `class="flag" style="color:${fac.color}"`);
+      if (t.improved) {
+        b += use(IMPROVEMENT_SYMBOL[t.terrain] ?? 's-farm', 30, -14, 34);
+        for (let i = 0; i < t.improved; i++) b += `<circle cx="${22 + i * 14}" cy="-8" r="5.5" fill="#ffd23f" stroke="${INK}" stroke-width="2.2"/>`;
+      }
+      if (fac && !city && !build && !armies.length && !t.improved) b += use('s-flag', 34, -10, 30, `class="flag" style="color:${fac.color}"`);
       v.build.innerHTML = b;
       v.units.innerHTML = '';
       // Armies and markers (drawn above all tiles).
       let top = '';
-      if (armies.length === 1) top += armyToken(armies[0], 0, 36, 1, armies[0].owner === cur);
-      else if (armies.length === 2) top += armyToken(armies[0], -24, 30, 0.8, armies[0].owner === cur) + armyToken(armies[1], 24, 40, 0.8, armies[1].owner === cur);
+      const def = armies.length ? defenseBonus(state, t, armies[0].owner).total : 0;
+      if (armies.length === 1) top += armyToken(armies[0], 0, 36, 1, armies[0].owner === cur, def);
+      else if (armies.length === 2) top += armyToken(armies[0], -24, 30, 0.8, armies[0].owner === cur, def) + armyToken(armies[1], 24, 40, 0.8, armies[1].owner === cur, def);
       if (city) {
         const sieges = Object.entries(city.siege).filter(([, n]) => n);
         sieges.forEach(([f, n], i) => { top += siegeMarker(f as FactionId, n!, 3 + city.level, 0, -78 - i * 26); });
       }
-      if (build) top += buildMarker(build.kind, build.turnsLeft, 26, -46);
+      if (build) top += buildMarker(build.kind, build.turnsLeft, build.kind === 'improve' ? 30 : 26, build.kind === 'improve' ? -30 : -46);
       v.badgeIn.innerHTML = top;
       v.badge.classList.toggle('has-army', armies.length > 0);
     }
@@ -508,7 +514,7 @@ export class Board {
 const ownerColor = (o: Army['owner']) => (o === 'neutral' ? NEUTRAL.dark : FACTIONS[o].color);
 
 /** A small stack of unit figures with a count badge and movement pips. */
-export function armyToken(a: Army, x: number, y: number, k: number, active: boolean): string {
+export function armyToken(a: Army, x: number, y: number, k: number, active: boolean, def = 0): string {
   const units = [...a.units].sort((p, q) => UNIT_STATS[q.type].tier - UNIT_STATS[p.type].tier);
   const shown: string[] = [];
   for (const u of units) { if (!shown.includes(u.type)) shown.push(u.type); if (shown.length === 3) break; }
@@ -518,7 +524,7 @@ export function armyToken(a: Army, x: number, y: number, k: number, active: bool
   const order = [2, 1, 0].filter((i) => i < shown.length);
   const figs = order.map((i) => use(`unit-${shown[i]}`, x + spots[i][0], y + spots[i][1] - 4 * k, size, i ? 'class="back"' : '')).join('');
   const wounded = a.units.some((u) => u.hp < UNIT_STATS[u.type].hp);
-  const col = ownerColor(a.owner);
+  const col = a.units.length > ARMY_FREE_SIZE ? '#f08a24' : ownerColor(a.owner);
   const bx = x + 26 * k, by = y - 4 * k;
   const pips = active ? [0, 1, 2].map((i) => `<circle cx="${(x - 12 * k + i * 12 * k).toFixed(1)}" cy="${(y + 9 * k).toFixed(1)}" r="${(4 * k).toFixed(1)}" class="pip ${i < a.mp ? 'on' : ''}"/>`).join('') : '';
   return `<g class="army ${active && a.mp <= 0 ? 'spent' : ''} ${a.attacked ? 'attacked' : ''}" data-army="${a.id}">
@@ -526,6 +532,8 @@ export function armyToken(a: Army, x: number, y: number, k: number, active: bool
     ${figs}
     <g transform="translate(${bx.toFixed(1)} ${by.toFixed(1)}) scale(${(0.74 * k).toFixed(2)})"><path d="${BADGE_PATH}" fill="${col}" stroke="${INK}" stroke-width="3.5" stroke-linejoin="round"/><text class="badge-text" y="7" text-anchor="middle">${a.units.length}</text>${wounded ? `<circle cx="17" cy="-14" r="6" fill="#ff5a4a" stroke="${INK}" stroke-width="2.5"/>` : ''}</g>
     ${pips}
+    ${def ? `<g transform="translate(${(x - 26 * k).toFixed(1)} ${(y - 6 * k).toFixed(1)}) scale(${(0.5 * k).toFixed(2)})"><path d="M0 -24 L22 -16 Q22 10 0 24 Q-22 10 -22 -16 Z" fill="#dfe6ec" stroke="${INK}" stroke-width="4" stroke-linejoin="round"/><text class="badge-text" y="9" text-anchor="middle">+${def}</text><title>Defence +${def} here</title></g>` : ''}
+    ${a.lowMorale ? `<g transform="translate(${(x + 26 * k).toFixed(1)} ${(y - 34 * k).toFixed(1)}) scale(${(0.5 * k).toFixed(2)})"><circle r="18" fill="#ff5a4a" stroke="${INK}" stroke-width="4"/><path d="M-8 -6 L0 6 L8 -6" stroke="#fff" stroke-width="5" fill="none" stroke-linecap="round" stroke-linejoin="round"/><title>Low morale: −1 attack and defence</title></g>` : ''}
   </g>`;
 }
 
@@ -536,7 +544,7 @@ function siegeMarker(f: FactionId, n: number, need: number, x: number, y: number
     <text class="badge-text small" x="9" y="6" text-anchor="middle">${n}/${need}</text></g>`;
 }
 
-function buildMarker(kind: 'city' | 'upgrade', left: number, x: number, y: number): string {
+function buildMarker(kind: 'city' | 'upgrade' | 'improve', left: number, x: number, y: number): string {
   return `<g class="buildmark" transform="translate(${x} ${y})"><circle r="12" fill="#ffd23f" stroke="${INK}" stroke-width="3"/>
-    <path d="M-5 5 L4 -4 M1 -7 L7 -1" stroke="${INK}" stroke-width="3" stroke-linecap="round"/><text class="badge-text small" x="16" y="12">${left}</text><title>${kind === 'city' ? 'City' : 'Upgrade'} ready in ${left} turn${left > 1 ? 's' : ''}</title></g>`;
+    <path d="M-5 5 L4 -4 M1 -7 L7 -1" stroke="${INK}" stroke-width="3" stroke-linecap="round"/><text class="badge-text small" x="16" y="12">${left}</text><title>${kind === 'city' ? 'City' : kind === 'improve' ? 'Improvement' : 'Upgrade'} ready in ${left} turn${left > 1 ? 's' : ''}</title></g>`;
 }
