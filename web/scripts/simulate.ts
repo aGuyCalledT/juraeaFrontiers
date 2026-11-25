@@ -5,7 +5,7 @@ import type { GameSetup } from '../src/engine/types';
 
 const results: Record<string, number> = {};
 let totalTurns = 0;
-const N = Number((globalThis as unknown as { process: { argv: string[] } }).process.argv[2] ?? 60);
+const N = Number(process.argv[2] ?? 60);
 for (let g = 0; g < N; g++) {
   const setup: GameSetup = {
     seed: 1000 + g,
