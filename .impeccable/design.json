@@ -1,0 +1,911 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-11-25T09:00:33+00:00",
+  "title": "Design System: Juräa Frontiers",
+  "extensions": {
+    "colorMeta": {
+      "ink": {
+        "role": "neutral",
+        "displayName": "Umber Ink",
+        "canonical": "#2b1d14",
+        "purpose": "Every outline, text stroke and translucent HUD backing.",
+        "tonalRamp": [
+          "#100a06",
+          "#2b221c",
+          "#493d35",
+          "#695a51",
+          "#8d7c72",
+          "#b0a198",
+          "#d4c8c0",
+          "#f6ece6"
+        ]
+      },
+      "wood-light": {
+        "role": "secondary",
+        "displayName": "Carved Wood Light",
+        "canonical": "#d0904f",
+        "purpose": "Top stop of the light wood gradient; default button and frame material.",
+        "tonalRamp": [
+          "#190500",
+          "#381c00",
+          "#5d3501",
+          "#854f0d",
+          "#ab7235",
+          "#cb9969",
+          "#ecc29a",
+          "#ffead8"
+        ]
+      },
+      "wood-mid": {
+        "role": "secondary",
+        "displayName": "Carved Wood",
+        "canonical": "#a8692f",
+        "purpose": "Middle stop of the light wood gradient.",
+        "tonalRamp": [
+          "#1a0400",
+          "#3a1b00",
+          "#5f3304",
+          "#854e19",
+          "#ac713c",
+          "#cc986d",
+          "#ecc19e",
+          "#feeadb"
+        ]
+      },
+      "wood-dark": {
+        "role": "secondary",
+        "displayName": "Carved Wood Dark",
+        "canonical": "#87501f",
+        "purpose": "Bottom stop of the light wood gradient.",
+        "tonalRamp": [
+          "#190500",
+          "#391b01",
+          "#5c3511",
+          "#825026",
+          "#a87247",
+          "#c99975",
+          "#eac2a4",
+          "#ffeadb"
+        ]
+      },
+      "wood-edge": {
+        "role": "secondary",
+        "displayName": "Wood Underside",
+        "canonical": "#5a3214",
+        "purpose": "Extruded slab edge under wood objects.",
+        "tonalRamp": [
+          "#160700",
+          "#351e0d",
+          "#563722",
+          "#7b5339",
+          "#a07659",
+          "#c19c83",
+          "#e3c3af",
+          "#ffeadd"
+        ]
+      },
+      "stained-wood-light": {
+        "role": "secondary",
+        "displayName": "Stained Wood Light",
+        "canonical": "#8a5428",
+        "purpose": "Reading-surface wood, top stop.",
+        "tonalRamp": [
+          "#190500",
+          "#391b03",
+          "#5c3515",
+          "#81502a",
+          "#a8734a",
+          "#c89a78",
+          "#e9c2a6",
+          "#ffeadb"
+        ]
+      },
+      "stained-wood-mid": {
+        "role": "secondary",
+        "displayName": "Stained Wood",
+        "canonical": "#6e401c",
+        "purpose": "Reading-surface wood, middle stop.",
+        "tonalRamp": [
+          "#170600",
+          "#361d08",
+          "#59361d",
+          "#7d5233",
+          "#a37453",
+          "#c49b7e",
+          "#e5c3ab",
+          "#ffeadc"
+        ]
+      },
+      "stained-wood-dark": {
+        "role": "secondary",
+        "displayName": "Stained Wood Dark",
+        "canonical": "#573214",
+        "purpose": "Reading-surface wood, bottom stop.",
+        "tonalRamp": [
+          "#150701",
+          "#341e0e",
+          "#553823",
+          "#79543a",
+          "#9e775a",
+          "#bf9d84",
+          "#e1c4b0",
+          "#feeadc"
+        ]
+      },
+      "stone-light": {
+        "role": "secondary",
+        "displayName": "Speckled Stone Light",
+        "canonical": "#cfc8bb",
+        "purpose": "Highlight of stone controls.",
+        "tonalRamp": [
+          "#0d0b07",
+          "#27241d",
+          "#443f37",
+          "#625d53",
+          "#857f74",
+          "#a9a49a",
+          "#cecac2",
+          "#f2eee7"
+        ]
+      },
+      "stone-mid": {
+        "role": "secondary",
+        "displayName": "Speckled Stone",
+        "canonical": "#a49c8f",
+        "purpose": "Round icon buttons, resource plaques.",
+        "tonalRamp": [
+          "#0d0b07",
+          "#27231d",
+          "#443f36",
+          "#635d52",
+          "#867f73",
+          "#aaa499",
+          "#cfcac1",
+          "#f2eee7"
+        ]
+      },
+      "stone-edge": {
+        "role": "secondary",
+        "displayName": "Stone Underside",
+        "canonical": "#6b6358",
+        "purpose": "Slab edge under stone controls.",
+        "tonalRamp": [
+          "#0e0b07",
+          "#28231d",
+          "#443f37",
+          "#645c53",
+          "#877f74",
+          "#aaa39a",
+          "#cfcac2",
+          "#f2eee7"
+        ]
+      },
+      "go-light": {
+        "role": "primary",
+        "displayName": "Grass Go Green",
+        "canonical": "#8fe05a",
+        "purpose": "Commit actions, the phase button.",
+        "tonalRamp": [
+          "#011000",
+          "#112c00",
+          "#254b03",
+          "#386d04",
+          "#4e9502",
+          "#7bb856",
+          "#a9dc8d",
+          "#d5fdbf"
+        ]
+      },
+      "go-mid": {
+        "role": "primary",
+        "displayName": "Grass Go Green Deep",
+        "canonical": "#4f9e2b",
+        "purpose": "Bottom stop of the go gradient.",
+        "tonalRamp": [
+          "#001100",
+          "#0a2d00",
+          "#1a4d00",
+          "#2d6f04",
+          "#4c952c",
+          "#7bb864",
+          "#a9db97",
+          "#d4fcc6"
+        ]
+      },
+      "go-edge": {
+        "role": "primary",
+        "displayName": "Go Underside",
+        "canonical": "#2f6b17",
+        "purpose": "Slab edge under go buttons.",
+        "tonalRamp": [
+          "#001100",
+          "#0a2d00",
+          "#204c0f",
+          "#376d24",
+          "#599146",
+          "#84b475",
+          "#b0d8a4",
+          "#dafad0"
+        ]
+      },
+      "gold": {
+        "role": "primary",
+        "displayName": "Coin Gold",
+        "canonical": "#ffd23f",
+        "purpose": "Selection, value, focus ring, waiting state.",
+        "tonalRamp": [
+          "#120a00",
+          "#2e2200",
+          "#4e3e02",
+          "#725b01",
+          "#9c7c00",
+          "#c2a137",
+          "#e3c87b",
+          "#ffeebe"
+        ]
+      },
+      "gold-deep": {
+        "role": "primary",
+        "displayName": "Coin Gold Deep",
+        "canonical": "#e0a21c",
+        "purpose": "Bottom stop of gold surfaces.",
+        "tonalRamp": [
+          "#150800",
+          "#322000",
+          "#553a00",
+          "#7b5600",
+          "#a6770f",
+          "#cb9c45",
+          "#ebc482",
+          "#feecce"
+        ]
+      },
+      "cream": {
+        "role": "neutral",
+        "displayName": "Cream",
+        "canonical": "#fff4dc",
+        "purpose": "Text on dark wood, input fill.",
+        "tonalRamp": [
+          "#0e0b04",
+          "#292318",
+          "#463f30",
+          "#655d4a",
+          "#897f6b",
+          "#aca492",
+          "#d1cabb",
+          "#f3eee2"
+        ]
+      },
+      "parchment": {
+        "role": "neutral",
+        "displayName": "Parchment",
+        "canonical": "#ffe8c2",
+        "purpose": "Secondary text on wood.",
+        "tonalRamp": [
+          "#110a01",
+          "#2d220f",
+          "#4c3d25",
+          "#6d5b3c",
+          "#917d5d",
+          "#b3a286",
+          "#d7c9b1",
+          "#f8eddb"
+        ]
+      },
+      "label-tan": {
+        "role": "neutral",
+        "displayName": "Label Tan",
+        "canonical": "#ffe1ad",
+        "purpose": "Uppercase control labels.",
+        "tonalRamp": [
+          "#130900",
+          "#302105",
+          "#4f3c19",
+          "#715a2e",
+          "#967c4f",
+          "#b7a17b",
+          "#dac8a9",
+          "#fbedd4"
+        ]
+      },
+      "danger": {
+        "role": "tertiary",
+        "displayName": "Danger Red",
+        "canonical": "#ff5a3c",
+        "purpose": "Attack targets, lost dice.",
+        "tonalRamp": [
+          "#220000",
+          "#4b0100",
+          "#771402",
+          "#ab1f02",
+          "#db4428",
+          "#f97960",
+          "#fdb6a7",
+          "#ffe9e4"
+        ]
+      },
+      "sea-shallow": {
+        "role": "neutral",
+        "displayName": "Shallow Teal Sea",
+        "canonical": "#4ccfcf",
+        "purpose": "Centre of the radial sea canvas.",
+        "tonalRamp": [
+          "#000f0f",
+          "#002b2b",
+          "#004a4a",
+          "#0b6b6b",
+          "#0e9293",
+          "#59b6b6",
+          "#92dad9",
+          "#c4fbfa"
+        ]
+      },
+      "sea-mid": {
+        "role": "neutral",
+        "displayName": "Teal Sea",
+        "canonical": "#24a3ad",
+        "purpose": "Middle of the sea canvas.",
+        "tonalRamp": [
+          "#000f11",
+          "#002a2e",
+          "#02494e",
+          "#026b72",
+          "#18919a",
+          "#61b4bb",
+          "#97d8de",
+          "#c7f9fe"
+        ]
+      },
+      "sea-deep": {
+        "role": "neutral",
+        "displayName": "Deep Teal Sea",
+        "canonical": "#136a80",
+        "purpose": "Edge of the sea canvas.",
+        "tonalRamp": [
+          "#000e15",
+          "#002935",
+          "#074757",
+          "#1f677b",
+          "#448ba0",
+          "#75afc1",
+          "#a5d3e2",
+          "#d6f5ff"
+        ]
+      },
+      "felt": {
+        "role": "tertiary",
+        "displayName": "Dice Felt",
+        "canonical": "#1f5631",
+        "purpose": "Baize inside the dice tray.",
+        "tonalRamp": [
+          "#001003",
+          "#0c2b16",
+          "#22492e",
+          "#3a6a47",
+          "#5b8e68",
+          "#86b190",
+          "#b2d5b9",
+          "#dbf7e1"
+        ]
+      },
+      "plains": {
+        "role": "tertiary",
+        "displayName": "Meadow",
+        "canonical": "#9ccf45",
+        "purpose": "Plains tile top.",
+        "tonalRamp": [
+          "#050f00",
+          "#1a2a00",
+          "#314900",
+          "#4a6905",
+          "#669004",
+          "#8db450",
+          "#b7d88a",
+          "#dffabc"
+        ]
+      },
+      "forest": {
+        "role": "tertiary",
+        "displayName": "Pine Forest",
+        "canonical": "#4f9a3a",
+        "purpose": "Forest tile top.",
+        "tonalRamp": [
+          "#001100",
+          "#072d00",
+          "#164d01",
+          "#2c6f16",
+          "#4f943b",
+          "#7cb76d",
+          "#aada9e",
+          "#d5fbcc"
+        ]
+      },
+      "mountain": {
+        "role": "tertiary",
+        "displayName": "Slate Mountain",
+        "canonical": "#a7a096",
+        "purpose": "Mountain tile top.",
+        "tonalRamp": [
+          "#0d0b08",
+          "#27231e",
+          "#443f38",
+          "#625d54",
+          "#857f76",
+          "#a9a49c",
+          "#cecac3",
+          "#f2eee9"
+        ]
+      },
+      "desert": {
+        "role": "tertiary",
+        "displayName": "Warm Sand",
+        "canonical": "#f0cb6b",
+        "purpose": "Desert tile top.",
+        "tonalRamp": [
+          "#130900",
+          "#2f2200",
+          "#503d00",
+          "#745a07",
+          "#9c7c1a",
+          "#bda15b",
+          "#dfc890",
+          "#ffedc1"
+        ]
+      },
+      "necro-violet": {
+        "role": "tertiary",
+        "displayName": "Necro Violet",
+        "canonical": "#8e4fc4",
+        "purpose": "Death Cults main.",
+        "tonalRamp": [
+          "#150027",
+          "#320c4e",
+          "#522478",
+          "#753da4",
+          "#9a60ce",
+          "#bb8cea",
+          "#dabafd",
+          "#f3eaff"
+        ]
+      },
+      "necro-dark": {
+        "role": "tertiary",
+        "displayName": "Necro Shadow",
+        "canonical": "#4a2370",
+        "purpose": "Death Cults dark.",
+        "tonalRamp": [
+          "#110320",
+          "#2d1743",
+          "#4b306a",
+          "#6c4b93",
+          "#906dba",
+          "#b295d8",
+          "#d5bef6",
+          "#f2eaff"
+        ]
+      },
+      "necro-toxic": {
+        "role": "tertiary",
+        "displayName": "Toxic Soul Green",
+        "canonical": "#8dff5a",
+        "purpose": "Death Cults accent.",
+        "tonalRamp": [
+          "#001100",
+          "#0b2d00",
+          "#1b4d00",
+          "#2f6f06",
+          "#419706",
+          "#69bd44",
+          "#9ce082",
+          "#ceffbd"
+        ]
+      },
+      "elves-gold": {
+        "role": "tertiary",
+        "displayName": "Evergarden Gold",
+        "canonical": "#f0b928",
+        "purpose": "Evergarden main.",
+        "tonalRamp": [
+          "#140900",
+          "#302100",
+          "#523c00",
+          "#765908",
+          "#a17a0b",
+          "#c79e3c",
+          "#e8c67d",
+          "#ffedc6"
+        ]
+      },
+      "elves-dark": {
+        "role": "tertiary",
+        "displayName": "Evergarden Bark",
+        "canonical": "#8a5b08",
+        "purpose": "Evergarden dark.",
+        "tonalRamp": [
+          "#160700",
+          "#341f00",
+          "#583802",
+          "#7e540e",
+          "#a47636",
+          "#c49d69",
+          "#e5c59b",
+          "#ffebd3"
+        ]
+      },
+      "elves-leaf": {
+        "role": "tertiary",
+        "displayName": "Evergarden Leaf",
+        "canonical": "#5fd35a",
+        "purpose": "Evergarden accent.",
+        "tonalRamp": [
+          "#001100",
+          "#002e00",
+          "#004f00",
+          "#08720a",
+          "#299927",
+          "#67bc62",
+          "#9bdf96",
+          "#ccffc7"
+        ]
+      },
+      "giants-crimson": {
+        "role": "tertiary",
+        "displayName": "Giant Crimson",
+        "canonical": "#e0452f",
+        "purpose": "Giants main.",
+        "tonalRamp": [
+          "#220000",
+          "#4b0100",
+          "#7a0d00",
+          "#ab1f0b",
+          "#d74833",
+          "#f57c67",
+          "#feb6a8",
+          "#ffe9e4"
+        ]
+      },
+      "giants-dark": {
+        "role": "tertiary",
+        "displayName": "Giant Blood",
+        "canonical": "#7c1a10",
+        "purpose": "Giants dark.",
+        "tonalRamp": [
+          "#200000",
+          "#440e08",
+          "#6c251c",
+          "#963d31",
+          "#c06051",
+          "#df8b7d",
+          "#fdb6aa",
+          "#ffe9e5"
+        ]
+      },
+      "giants-ember": {
+        "role": "tertiary",
+        "displayName": "Giant Ember",
+        "canonical": "#ffb02e",
+        "purpose": "Giants accent.",
+        "tonalRamp": [
+          "#160700",
+          "#341f00",
+          "#583801",
+          "#7f5300",
+          "#ab7312",
+          "#d3973f",
+          "#f2c17e",
+          "#ffebd3"
+        ]
+      },
+      "wildlands": {
+        "role": "tertiary",
+        "displayName": "Wildlands Tan",
+        "canonical": "#b9a88f",
+        "purpose": "Unclaimed neutral land.",
+        "tonalRamp": [
+          "#100a03",
+          "#2b2316",
+          "#493e2d",
+          "#695b47",
+          "#8d7e67",
+          "#b0a38f",
+          "#d4c9b9",
+          "#f6ede0"
+        ]
+      }
+    },
+    "typographyMeta": {
+      "display": {
+        "displayName": "Sign Display",
+        "purpose": "The hanging title sign only; white with full outline and 8px ink drop."
+      },
+      "headline": {
+        "displayName": "Headline",
+        "purpose": "Panel and modal titles; banner titles at 36px."
+      },
+      "title": {
+        "displayName": "Title",
+        "purpose": "Turn name, big buttons, phase button."
+      },
+      "button": {
+        "displayName": "Button",
+        "purpose": "All standard buttons, with small ink outline."
+      },
+      "numeral": {
+        "displayName": "Numeral",
+        "purpose": "Resource counts, tile badges, float numbers; always tabular."
+      },
+      "body": {
+        "displayName": "Body",
+        "purpose": "Panel copy and hint bar; help paragraphs capped at 62ch."
+      },
+      "body-strong": {
+        "displayName": "Body Strong",
+        "purpose": "Chips, segments, toasts, tooltips, stat rows."
+      },
+      "label": {
+        "displayName": "Control Label",
+        "purpose": "Uppercase labels that name a control or field."
+      }
+    },
+    "shadows": [
+      {
+        "name": "slab-edge",
+        "value": "0 5px 0 var(--wood-edge)",
+        "purpose": "Extruded underside of pressable objects, in the material own dark tone (3 to 8px by size)."
+      },
+      {
+        "name": "ambient-sea",
+        "value": "0 9px 14px rgba(8, 30, 52, 0.3)",
+        "purpose": "Soft sea-tinted shadow under raised objects."
+      },
+      {
+        "name": "ambient-sea-high",
+        "value": "0 20px 34px rgba(8, 30, 52, 0.45)",
+        "purpose": "Dice tray and banner, the highest objects."
+      },
+      {
+        "name": "top-lit-bevel",
+        "value": "inset 0 2px 0 rgba(255, 255, 255, 0.45), inset 0 -3px 0 rgba(0, 0, 0, 0.18)",
+        "purpose": "Lip highlight and bottom shade on buttons and plaques."
+      },
+      {
+        "name": "plank-inlay",
+        "value": "inset 0 0 0 3px rgba(255, 214, 160, 0.28), inset 0 0 0 6px rgba(70, 36, 12, 0.35), inset 0 -6px 0 rgba(60, 30, 10, 0.4)",
+        "purpose": "Carved double border inside wooden boards."
+      },
+      {
+        "name": "gold-halo",
+        "value": "0 0 0 4px #ffd23f",
+        "purpose": "Selection ring: armed card, winning die, good toast."
+      },
+      {
+        "name": "outline-small",
+        "value": "0 1.5px 0 #2b1d14, 0 -1.5px 0 #2b1d14, 1.5px 0 0 #2b1d14, -1.5px 0 0 #2b1d14, 1px 1px 0 #2b1d14, -1px 1px 0 #2b1d14, 1px -1px 0 #2b1d14, -1px -1px 0 #2b1d14, 0 2.5px 0 #2b1d14",
+        "purpose": "Stamped ink outline (text-shadow) for display text up to 24px."
+      },
+      {
+        "name": "outline",
+        "value": "0 2px 0 #2b1d14, 0 -2px 0 #2b1d14, 2px 0 0 #2b1d14, -2px 0 0 #2b1d14, 1.5px 1.5px 0 #2b1d14, -1.5px 1.5px 0 #2b1d14, 1.5px -1.5px 0 #2b1d14, -1.5px -1.5px 0 #2b1d14, 0 4px 0 #2b1d14",
+        "purpose": "Stamped ink outline (text-shadow) for headlines and display."
+      }
+    ],
+    "motion": [
+      {
+        "name": "ease-bounce",
+        "value": "cubic-bezier(0.34, 1.56, 0.64, 1)",
+        "purpose": "Arrivals with overshoot: badges, banners, panels, dice tray, flags, cards."
+      },
+      {
+        "name": "ease-out",
+        "value": "cubic-bezier(0.16, 1, 0.3, 1)",
+        "purpose": "Settles: tile drops, button press, floats, hint and tray slides."
+      },
+      {
+        "name": "ease-exit",
+        "value": "cubic-bezier(0.55, 0, 0.9, 0.5)",
+        "purpose": "Banner leaving the screen."
+      },
+      {
+        "name": "press",
+        "value": "140ms",
+        "purpose": "Button and stone-button press and hover."
+      },
+      {
+        "name": "tile-drop",
+        "value": "620ms + 70ms per ring of distance",
+        "purpose": "Island assembly: tiles drop with squash (scale 1.04, 0.94) rippling from the centre."
+      },
+      {
+        "name": "badge-pop",
+        "value": "380ms",
+        "purpose": "Troop badge pop-in and count change (360ms, scale to 1.45)."
+      },
+      {
+        "name": "panel-in",
+        "value": "400 to 450ms",
+        "purpose": "Modal and panel entry from scale 0.8 to 0.92."
+      },
+      {
+        "name": "banner-in",
+        "value": "600ms",
+        "purpose": "Ribbon swings in from the left with rotation; exits in 450ms."
+      },
+      {
+        "name": "conquest",
+        "value": "650ms ring, 560ms flag",
+        "purpose": "Ring flare in faction colour, flag drops and bounces, confetti."
+      },
+      {
+        "name": "reduced-motion",
+        "value": "speed scalar; WAAPI skipped; CSS durations 0.01ms",
+        "purpose": "Every timing divides by motion.speed; all animation stops under prefers-reduced-motion."
+      }
+    ],
+    "breakpoints": [
+      {
+        "name": "desktop-compact",
+        "value": "1100px"
+      },
+      {
+        "name": "tablet",
+        "value": "900px"
+      },
+      {
+        "name": "phone",
+        "value": "760px"
+      },
+      {
+        "name": "touch",
+        "value": "(hover: none)"
+      }
+    ]
+  },
+  "components": [
+    {
+      "name": "Wood Button",
+      "kind": "button",
+      "refersTo": "button-wood",
+      "description": "Default action: a carved-wood slab that sinks on press.",
+      "html": "<button class=\"ds-btn-wood\">How to play</button>",
+      "css": ".ds-btn-wood { font: 400 19px/1 var(--display); letter-spacing: 0.02em; color: #fff; text-shadow: var(--outline-s); display: inline-flex; align-items: center; gap: 8px; min-height: 48px; padding: 10px 20px; border: 3px solid var(--ink); border-radius: 14px; cursor: pointer; background: linear-gradient(180deg, color-mix(in srgb, var(--wood-1) 100%, white 18%) 0%, var(--wood-1) 45%, var(--wood-3) 100%); box-shadow: inset 0 2px 0 rgba(255,255,255,0.45), inset 0 -3px 0 rgba(0,0,0,0.18), 0 5px 0 var(--wood-edge), 0 9px 14px rgba(8,30,52,0.3); transition: transform 0.14s var(--out), box-shadow 0.14s var(--out), filter 0.2s; } .ds-btn-wood:hover { filter: brightness(1.08) saturate(1.05); transform: translateY(-1px); } .ds-btn-wood:focus-visible { outline: 3px solid var(--gold); outline-offset: 3px; } .ds-btn-wood:active { transform: translateY(4px); box-shadow: inset 0 2px 0 rgba(255,255,255,0.35), 0 1px 0 var(--wood-edge), 0 3px 6px rgba(8,30,52,0.3); }"
+    },
+    {
+      "name": "Go Button",
+      "kind": "button",
+      "refersTo": "button-go",
+      "description": "Commit action on a surface (Begin the conquest, the phase button).",
+      "html": "<button class=\"ds-btn-go\">Begin the conquest</button>",
+      "css": ".ds-btn-go { font: 400 19px/1 var(--display); letter-spacing: 0.02em; color: #fff; text-shadow: var(--outline-s); display: inline-flex; align-items: center; gap: 8px; min-height: 48px; padding: 10px 20px; border: 3px solid var(--ink); border-radius: 14px; cursor: pointer; background: linear-gradient(180deg, color-mix(in srgb, var(--go-1) 100%, white 18%) 0%, var(--go-1) 45%, var(--go-2) 100%); box-shadow: inset 0 2px 0 rgba(255,255,255,0.45), inset 0 -3px 0 rgba(0,0,0,0.18), 0 5px 0 var(--go-edge), 0 9px 14px rgba(8,30,52,0.3); transition: transform 0.14s var(--out), box-shadow 0.14s var(--out), filter 0.2s; } .ds-btn-go:hover { filter: brightness(1.08) saturate(1.05); transform: translateY(-1px); } .ds-btn-go:focus-visible { outline: 3px solid var(--gold); outline-offset: 3px; } .ds-btn-go:active { transform: translateY(4px); box-shadow: inset 0 2px 0 rgba(255,255,255,0.35), 0 1px 0 var(--go-edge), 0 3px 6px rgba(8,30,52,0.3); }"
+    },
+    {
+      "name": "Stone Ghost Button",
+      "kind": "button",
+      "refersTo": "button-stone-ghost",
+      "description": "Back or cancel.",
+      "html": "<button class=\"ds-btn-ghost\">Cancel</button>",
+      "css": ".ds-btn-ghost { font: 400 19px/1 var(--display); letter-spacing: 0.02em; color: #fff; text-shadow: var(--outline-s); display: inline-flex; align-items: center; gap: 8px; min-height: 48px; padding: 10px 20px; border: 3px solid var(--ink); border-radius: 14px; cursor: pointer; background: linear-gradient(180deg, color-mix(in srgb, #8b7a68 100%, white 18%) 0%, #8b7a68 45%, #5e5044 100%); box-shadow: inset 0 2px 0 rgba(255,255,255,0.45), inset 0 -3px 0 rgba(0,0,0,0.18), 0 5px 0 #3b3029, 0 9px 14px rgba(8,30,52,0.3); transition: transform 0.14s var(--out), box-shadow 0.14s var(--out), filter 0.2s; } .ds-btn-ghost:hover { filter: brightness(1.08) saturate(1.05); transform: translateY(-1px); } .ds-btn-ghost:focus-visible { outline: 3px solid var(--gold); outline-offset: 3px; } .ds-btn-ghost:active { transform: translateY(4px); box-shadow: inset 0 2px 0 rgba(255,255,255,0.35), 0 1px 0 #3b3029, 0 3px 6px rgba(8,30,52,0.3); }"
+    },
+    {
+      "name": "Round Stone Button",
+      "kind": "button",
+      "refersTo": "icon-button-stone",
+      "description": "Icon-only control in the top plank and zoom stack.",
+      "html": "<button class=\"ds-icon-btn\" aria-label=\"Settings\"><svg viewBox=\"0 0 32 32\" width=\"24\" height=\"24\" aria-hidden=\"true\"><path d=\"M16 4 L19 4 L20 8 L24 10 L27 8 L29 11 L26 14 L26 18 L29 21 L27 24 L24 22 L20 24 L19 28 L13 28 L12 24 L8 22 L5 24 L3 21 L6 18 L6 14 L3 11 L5 8 L8 10 L12 8 L13 4 Z\" fill=\"#c9b79a\" stroke=\"#2b1d14\" stroke-width=\"2.4\" stroke-linejoin=\"round\" stroke-linecap=\"round\"/><circle cx=\"16\" cy=\"16\" r=\"4.5\" fill=\"#6b5a45\" stroke=\"#2b1d14\" stroke-width=\"2.4\" stroke-linejoin=\"round\" stroke-linecap=\"round\"/></svg></button>",
+      "css": ".ds-icon-btn { width: 46px; height: 46px; border-radius: 50%; border: 3px solid var(--ink); padding: 0; display: grid; place-items: center; cursor: pointer; background: var(--speck), radial-gradient(circle at 35% 30%, #dcd6cb, var(--stone-2) 65%, #7f776b); box-shadow: inset 0 3px 0 rgba(255,255,255,0.35), inset 0 -4px 0 rgba(0,0,0,0.25), 0 4px 0 var(--stone-edge), 0 8px 12px rgba(8,30,52,0.3); transition: transform 0.14s var(--out), box-shadow 0.14s; } .ds-icon-btn svg { width: 26px; height: 26px; } .ds-icon-btn:hover { transform: translateY(-1px) rotate(-4deg); } .ds-icon-btn:focus-visible { outline: 3px solid var(--gold); outline-offset: 3px; } .ds-icon-btn:active { transform: translateY(3px); box-shadow: 0 1px 0 var(--stone-edge); }"
+    },
+    {
+      "name": "Segment Control",
+      "kind": "chip",
+      "refersTo": "segment-on",
+      "description": "Exclusive choice in an ink well; the selected option becomes a gold pill.",
+      "html": "<div class=\"ds-seg\"><button class=\"ds-seg-btn\">Small</button><button class=\"ds-seg-btn on\">Medium</button><button class=\"ds-seg-btn\">Large</button></div>",
+      "css": ".ds-seg { display: inline-flex; gap: 4px; padding: 4px; border-radius: 14px; background: rgba(43,29,20,0.5); border: 2px solid var(--ink); } .ds-seg-btn { font: 600 15px/1 var(--ui); color: var(--cream); background: transparent; border: 2px solid transparent; border-radius: 10px; min-height: 36px; padding: 6px 12px; cursor: pointer; transition: background 0.2s, color 0.2s, transform 0.2s var(--bounce); } .ds-seg-btn:hover { background: rgba(255,244,220,0.12); } .ds-seg-btn:focus-visible { outline: 3px solid var(--gold); outline-offset: 3px; } .ds-seg-btn.on { background: linear-gradient(180deg, #ffe27a, var(--gold-deep)); color: var(--ink); border-color: var(--ink); transform: scale(1.04); }"
+    },
+    {
+      "name": "Text Input",
+      "kind": "input",
+      "refersTo": "input",
+      "description": "Cream field with a thick ink border.",
+      "html": "<label class=\"ds-field\"><span>Your name</span><input class=\"ds-input\" placeholder=\"Adanthar\"></label>",
+      "css": ".ds-field { display: flex; flex-direction: column; gap: 6px; } .ds-field span { font: 600 13px/1 var(--ui); text-transform: uppercase; letter-spacing: 0.08em; color: #ffe1ad; } .ds-input { font: 600 18px/1 var(--ui); color: var(--ink); caret-color: var(--wood-3); padding: 12px 14px; border-radius: 12px; border: 3px solid var(--ink); background: var(--cream); box-shadow: inset 0 3px 0 rgba(43,29,20,0.15); } .ds-input::placeholder { color: rgba(43,29,20,0.62); } .ds-input:focus-visible { outline: 3px solid var(--gold); outline-offset: 3px; }"
+    },
+    {
+      "name": "Top Plank",
+      "kind": "nav",
+      "refersTo": "plank-panel",
+      "description": "The carved HUD board: turn, phase steps and resource plaques.",
+      "html": "<nav class=\"ds-plank\"><b class=\"ds-turn\">Death Cults</b><span class=\"ds-phase active\">Reinforce</span><span class=\"ds-phase\">Attack</span><span class=\"ds-res\"><svg viewBox=\"0 0 32 32\" width=\"24\" height=\"24\" aria-hidden=\"true\"><ellipse cx=\"16\" cy=\"19\" rx=\"11\" ry=\"6\" fill=\"#c8901c\" stroke=\"#2b1d14\" stroke-width=\"2.4\" stroke-linejoin=\"round\" stroke-linecap=\"round\"/><ellipse cx=\"16\" cy=\"14\" rx=\"11\" ry=\"6\" fill=\"#ffd23f\" stroke=\"#2b1d14\" stroke-width=\"2.4\" stroke-linejoin=\"round\" stroke-linecap=\"round\"/></svg><b>3</b></span></nav>",
+      "css": ".ds-plank { display: flex; align-items: center; gap: 10px; padding: 8px 12px; border: 4px solid var(--ink); border-radius: 14px 22px 16px 24px / 20px 12px 24px 14px; background: repeating-linear-gradient(180deg, transparent 0 40px, rgba(43,29,20,0.55) 40px 42px), linear-gradient(180deg, var(--wood-1), var(--wood-2) 55%, var(--wood-3)); box-shadow: inset 0 0 0 3px rgba(255,214,160,0.28), inset 0 0 0 6px rgba(70,36,12,0.35), 0 6px 0 var(--wood-edge), 0 14px 26px rgba(8,30,52,0.38); } .ds-turn { font: 400 24px/1.05 var(--display); color: #fff; text-shadow: var(--outline-s); margin-right: auto; } .ds-phase { font: 400 16px/1 var(--display); color: #f2ebe0; text-shadow: var(--outline-s); padding: 6px 12px; border: 2.5px solid var(--ink); border-radius: 12px; background: linear-gradient(180deg, #9f978a, #756d62); box-shadow: inset 0 2px 0 rgba(255,255,255,0.25), 0 3px 0 #4d473f; opacity: 0.72; } .ds-phase.active { opacity: 1; background: linear-gradient(180deg, #b98ae0, #8e4fc4 60%, #4a2370); box-shadow: inset 0 2px 0 rgba(255,255,255,0.4), 0 4px 0 #4a2370; transform: translateY(-2px) scale(1.06); } .ds-res { display: inline-flex; align-items: center; gap: 5px; padding: 4px 11px 4px 6px; border-radius: 10px; border: 2.5px solid var(--ink); background: linear-gradient(180deg, #8f877b, #6a635a); box-shadow: inset 0 2px 0 rgba(255,255,255,0.28), 0 3px 0 #48423b; } .ds-res b { font: 400 20px/1 var(--display); color: #fff; text-shadow: var(--outline-s); font-variant-numeric: tabular-nums; }"
+    },
+    {
+      "name": "Quick Chips",
+      "kind": "chip",
+      "refersTo": "chip",
+      "description": "Quick-pick amounts in the hint bar.",
+      "html": "<div class=\"ds-chips\"><button class=\"ds-chip on\">+1</button><button class=\"ds-chip\">+5</button><button class=\"ds-chip\">All</button></div>",
+      "css": ".ds-chips { display: flex; gap: 5px; } .ds-chip { font: 600 14px/1 var(--ui); min-height: 34px; padding: 6px 11px; border-radius: 10px; border: 2px solid var(--ink); color: var(--cream); background: #5e5044; cursor: pointer; transition: transform 0.2s var(--bounce), background 0.2s; } .ds-chip:hover { background: #6e5f52; } .ds-chip:focus-visible { outline: 3px solid var(--gold); outline-offset: 3px; } .ds-chip.on { background: linear-gradient(180deg, #ffe27a, var(--gold-deep)); color: var(--ink); transform: scale(1.06); }"
+    },
+    {
+      "name": "Stained Plank Panel",
+      "kind": "card",
+      "refersTo": "plank-panel",
+      "description": "Reading surface for setup, help and modals.",
+      "html": "<section class=\"ds-panel\"><h2>Choose your banners</h2><p>Several players can share this device and take turns.</p></section>",
+      "css": ".ds-panel { padding: 22px 24px 26px; border: 4px solid var(--ink); border-radius: 24px 14px 20px 26px / 16px 24px 14px 22px; background: repeating-linear-gradient(180deg, transparent 0 40px, rgba(43,29,20,0.55) 40px 42px, rgba(255,210,150,0.22) 42px 43px), linear-gradient(180deg, #8a5428, #6e401c 55%, #573214); box-shadow: inset 0 0 0 3px rgba(255,214,160,0.28), inset 0 0 0 6px rgba(70,36,12,0.35), inset 0 -6px 0 rgba(60,30,10,0.4), 0 6px 0 var(--wood-edge), 0 14px 26px rgba(8,30,52,0.38); max-width: 440px; } .ds-panel h2 { font: 400 32px/1.05 var(--display); color: #fff; text-shadow: var(--outline); margin: 4px 0 8px; } .ds-panel p { margin: 0; color: #ffe8c2; font: 500 16px/1.4 var(--ui); }"
+    },
+    {
+      "name": "Ability Card",
+      "kind": "custom",
+      "refersTo": "ability-card",
+      "description": "Tray card for recruiting and faction abilities; lifts and tilts on hover, arms with a gold halo.",
+      "html": "<button class=\"ds-card\"><span class=\"ds-card-ico\"><svg viewBox=\"0 0 32 32\" width=\"24\" height=\"24\" aria-hidden=\"true\"><path d=\"M18 3 L7 18 L15 18 L13 29 L25 13 L17 13 Z\" fill=\"#ffd23f\" stroke=\"#2b1d14\" stroke-width=\"2.4\" stroke-linejoin=\"round\" stroke-linecap=\"round\"/></svg></span><span class=\"ds-card-title\">Raise the Fallen</span><span class=\"ds-card-cost\">5</span></button>",
+      "css": ".ds-card { width: 104px; min-height: 112px; padding: 8px 6px; display: flex; flex-direction: column; align-items: center; gap: 4px; border: 3px solid var(--ink); border-radius: 14px; color: #fff; cursor: pointer; background: var(--grain) 0 0 / 260px 90px, linear-gradient(180deg, #b77a42, #8c5424); box-shadow: inset 0 2px 0 rgba(255,230,180,0.45), 0 5px 0 var(--wood-edge), 0 10px 16px rgba(8,30,52,0.3); transition: transform 0.25s var(--bounce), box-shadow 0.25s; } .ds-card-ico svg { width: 44px; height: 44px; } .ds-card-title { font: 400 15px/1.05 var(--display); text-shadow: var(--outline-s); text-align: center; } .ds-card-cost { font: 400 16px/1 var(--display); text-shadow: var(--outline-s); padding: 2px 9px; border-radius: 999px; background: rgba(43,29,20,0.6); } .ds-card:hover { transform: translateY(-6px) rotate(-1.5deg); } .ds-card:focus-visible { outline: 3px solid var(--gold); outline-offset: 3px; } .ds-card:active { transform: translateY(2px); }"
+    }
+  ],
+  "narrative": {
+    "northStar": "The Carved Tabletop",
+    "overview": "**Creative North Star: \"The Carved Tabletop\"**\n\nJuräa Frontiers is a board game you could pick up: chunky cardboard hex tiles with visible thickness, floating on a cartoon teal sea, framed by carved wooden planks with iron rivets and round stone buttons. Everything is drawn in code as SVG, and every shape carries the same thick dark-umber outline, so the board art, the faction crests, the icons and the HUD read as one hand-inked object. The register is Catan's tabletop crossed with Kingdom Rush's chunky cartoon: saturated, friendly, never grim, even when the subject is necromancers.\n\nThe board is the screen. The HUD floats over it as a few physical objects (a wooden top plank, a player ledger, a tray of ability cards, one big green phase button), each with an extruded edge that sits it on the table. Reading surfaces (panels, modals, tooltips) are dark-stained wood so cream text holds its contrast; action surfaces are light wood, grass-green or stone. Faction colour does the identifying work everywhere: tile rings, crests, flags, dice, the ribbon banner, the active phase pill.\n\nMotion is staged, physical and springy. Tiles drop and squash into place, badges pop with overshoot, banners swing in on a bounce and fly out with an ease-in, dice tumble, slam, and resolve. Every timing flows through one speed scalar and every animation stops under reduced motion.",
+    "keyCharacteristics": [
+      "One ink: dark umber (#2b1d14) outlines on every drawn shape, 2.4 to 5 units in SVG, 2 to 4px in CSS.",
+      "Three materials: carved wood (frames, primary surfaces), speckled stone (secondary controls, resource plaques), and painted cardboard (tiles).",
+      "Extruded edges, not floating shadows: every raised object shows its own darker underside, then a soft sea-blue ambient shadow.",
+      "Display type is Lilita One with a stamped ink outline; UI type is Fredoka.",
+      "Saturated terrain and faction colours over a teal radial sea."
+    ],
+    "rules": [
+      {
+        "name": "The One Ink Rule",
+        "body": "Every drawn shape, CSS or SVG, is outlined in Umber Ink (#2b1d14). Never pure black, never a faction colour, never omitted on a raised object.",
+        "section": "colors"
+      },
+      {
+        "name": "The Faction Owns the Colour Rule",
+        "body": "Violet, gold and crimson mean a faction and nothing else. Generic UI never borrows them; UI emphasis uses Coin Gold or Grass Go Green.",
+        "section": "colors"
+      },
+      {
+        "name": "The Dark Stain Rule",
+        "body": "Any wood surface that carries paragraphs is stained dark; light wood carries only display-type labels with an ink outline.",
+        "section": "colors"
+      },
+      {
+        "name": "The Stamped Outline Rule",
+        "body": "Display type on any coloured or wooden surface carries the ink outline text-shadow (small: 1.5px ring plus 2.5px drop; full: 2px ring plus 4px drop). Fredoka body text never does.",
+        "section": "typography"
+      },
+      {
+        "name": "The Tabular Count Rule",
+        "body": "Every number that changes during play (resources, troops, stats, amounts) is tabular.",
+        "section": "typography"
+      },
+      {
+        "name": "The Slab Rule",
+        "body": "Anything you can press has a visible underside in its own darker tone, and pressing it sinks it into that underside. Flat clickable surfaces do not exist in this world.",
+        "section": "elevation"
+      },
+      {
+        "name": "The Sea Shadow Rule",
+        "body": "Ambient shadows are tinted toward the sea (rgba(8, 30, 52)), never neutral grey.",
+        "section": "elevation"
+      }
+    ],
+    "dos": [
+      "**Do** outline every drawn shape in Umber Ink (#2b1d14): 3 to 4px on major CSS objects, 2 to 2.5px on small ones, 2.4 to 5 units in SVG.",
+      "**Do** give every pressable object a slab edge in its own darker material tone and sink it on press (translateY 4px, edge to 1px).",
+      "**Do** stain wood dark (stained-wood tokens) wherever it carries body text.",
+      "**Do** set display text in Lilita One, white or gold, with the stamped ink outline.",
+      "**Do** let faction colour identify ownership: rings, crests, flags, dice, banner, active phase step.",
+      "**Do** animate with the bounce curve (cubic-bezier(0.34, 1.56, 0.64, 1)) for arrivals and the out curve (cubic-bezier(0.16, 1, 0.3, 1)) for settles, routed through the motion speed scalar and skipped under reduced motion.",
+      "**Do** author new icons and art as inline SVG in the same outlined, filled cartoon style."
+    ],
+    "donts": [
+      "**Don't** use pure black, grey shadows or a faction colour as an outline.",
+      "**Don't** use violet, gold-yellow #f0b928 or crimson for generic UI; they belong to the Death Cults, Evergarden and the Giants.",
+      "**Don't** build flat, borderless, gridded strategy-app panels or a sidebar of stats; HUD pieces are physical objects floating over the board.",
+      "**Don't** cut wooden boards with identical uniform radii; vary the elliptical radii and grain offset per board.",
+      "**Don't** put Fredoka paragraphs on light wood or give body text the stamped outline.",
+      "**Don't** add icon fonts, emoji or outline-only icon sets.",
+      "**Don't** add linear-eased one-shot motion; linear timing is for looping texture only (coast dashes, marching target rings, dice tumble)."
+    ]
+  }
+}
