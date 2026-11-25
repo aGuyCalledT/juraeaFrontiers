@@ -1,6 +1,7 @@
 import { DIRS, hexDistance, key } from './hex';
 import { Rng } from './rng';
 import type { Army, City, FactionId, GameSetup, Region, Terrain, Tile } from './types';
+export type { Terrain };
 import { FACTION_UNITS, UNIT_STATS, MOVE_POINTS } from './unitstats';
 
 const RADIUS = { small: 4, medium: 5, large: 6 } as const;
@@ -38,7 +39,7 @@ export function generateMap(setup: GameSetup): MapData {
     const r2 = Math.min(radius, -q + radius);
     for (let r = r1; r <= r2; r++) {
       tiles.push({
-        id: tiles.length, q, r, terrain: 'water', region: -1, owner: null, enchanted: false, deco: rng.int(1 << 30),
+        id: tiles.length, q, r, terrain: 'water', region: -1, owner: null, enchanted: false, improved: 0, deco: rng.int(1 << 30),
       });
     }
   }
@@ -160,7 +161,7 @@ export function generateMap(setup: GameSetup): MapData {
     let minD = Infinity;
     for (let i = 0; i < set.length; i++)
       for (let j = i + 1; j < set.length; j++) minD = Math.min(minD, hexDistance(set[i].q, set[i].r, set[j].q, set[j].r));
-    const score = minD + set.filter((t) => t.terrain === 'plains').length * 0.3;
+    const score = minD + rng.next() * 0.5;
     if (score > bestScore) { bestScore = score; bestSet = set; }
   }
 
@@ -169,7 +170,7 @@ export function generateMap(setup: GameSetup): MapData {
   const cities: City[] = [];
   const mkArmy = (owner: Army['owner'], tile: number, types: string[]): Army => {
     const a: Army = {
-      id: nextId++, owner, tile, mp: MOVE_POINTS, attacked: false,
+      id: nextId++, owner, tile, mp: MOVE_POINTS, attacked: false, lowMorale: false,
       units: types.map((t) => ({ id: nextId++, type: t as Army['units'][0]['type'], hp: UNIT_STATS[t as keyof typeof UNIT_STATS].hp })),
     };
     armies.push(a);
@@ -179,7 +180,7 @@ export function generateMap(setup: GameSetup): MapData {
   bestSet.forEach((cap, i) => {
     const f: FactionId = active[i];
     if (cap.terrain === 'water') return;
-    cap.terrain = cap.terrain === 'mountain' ? 'plains' : cap.terrain;
+    if (cap.terrain === 'mountain') cap.terrain = 'plains';
     cap.owner = f;
     cities.push({ tile: cap.id, owner: f, level: 0, siege: {}, capital: true });
     homes.push(cap.id);
@@ -191,16 +192,21 @@ export function generateMap(setup: GameSetup): MapData {
       const [t1, t2] = FACTION_UNITS[f];
       mkArmy(f, spot.id, [t1, t1, t1, t2]);
     }
-    // Make sure each faction has a little of its home terrain nearby.
-    const home = FACTION_TERRAIN[f];
-    const ring = land
-      .filter((x) => x.owner === null && hexDistance(x.q, x.r, cap.q, cap.r) <= 2)
-      .sort((a, b) => a.deco - b.deco);
-    if (ring.length && !ring.some((x) => x.terrain === home)) ring[0].terrain = home;
   });
 
+  // A third of the mountains are high peaks nobody can cross.
+  const mountains = rng.shuffle(land.filter((t) => t.terrain === 'mountain' && t.owner === null &&
+    homes.every((h) => hexDistance(tiles[h].q, tiles[h].r, t.q, t.r) >= 2)));
+  let peaks = Math.round(land.filter((t) => t.terrain === 'mountain').length / 3);
+  for (const m of mountains) {
+    if (peaks <= 0) break;
+    m.terrain = 'peak';
+    if (!allConnected(tiles, nb, homes)) { m.terrain = 'mountain'; continue; }
+    peaks--;
+  }
+
   // Neutral wildlings on roughly every fourth free hex, away from the capitals.
-  const free = rng.shuffle(land.filter((t) => t.owner === null && homes.every((h) => hexDistance(tiles[h].q, tiles[h].r, t.q, t.r) >= 2)));
+  const free = rng.shuffle(land.filter((t) => t.owner === null && t.terrain !== 'peak' && homes.every((h) => hexDistance(tiles[h].q, tiles[h].r, t.q, t.r) >= 2)));
   free.slice(0, Math.round(land.length / 4)).forEach((t) => {
     t.owner = 'neutral';
     const n = 1 + rng.int(3) + (t.terrain === 'mountain' ? 1 : 0);
@@ -210,4 +216,15 @@ export function generateMap(setup: GameSetup): MapData {
   return { radius, tiles, regions, neighbors: nb, armies, cities, nextId };
 }
 
-const FACTION_TERRAIN: Record<FactionId, Terrain> = { necro: 'desert', elves: 'forest', giants: 'mountain' };
+/** Every passable land hex must stay reachable from the first capital. */
+function allConnected(tiles: Tile[], nb: number[][], homes: number[]): boolean {
+  if (!homes.length) return true;
+  const ok = (t: Tile) => t.terrain !== 'water' && t.terrain !== 'peak';
+  const seen = new Set([homes[0]]);
+  const stack = [homes[0]];
+  while (stack.length) {
+    const id = stack.pop()!;
+    for (const n of nb[id]) if (!seen.has(n) && ok(tiles[n])) { seen.add(n); stack.push(n); }
+  }
+  return tiles.every((t) => !ok(t) || seen.has(t.id));
+}

@@ -39,7 +39,7 @@ function loadSave(): GameState | null {
     const raw = localStorage.getItem('jf-save');
     if (!raw) return null;
     const s = JSON.parse(raw) as GameState;
-    return s.version === 2 && s.phase !== 'over' ? s : null;
+    return s.version === 3 && s.phase !== 'over' ? s : null;
   } catch { return null; }
 }
 
@@ -191,10 +191,10 @@ function showHelp() {
     <h2>How to play</h2>
     <div class="help">
       <section><h3>${ICONS.crown}Goal</h3><p>Destroy every enemy unit. A faction also falls after <b>3 rounds without a city</b>, or at once if it can no longer get one in time.</p></section>
-      <section><h3>${ICONS.march}Moving</h3><p>Each army has <b>3 movement</b> per turn. Plains and desert cost 1, forest 2, mountains 3; a hex with a friendly army costs 1 less. Armies may leave a hex empty: land belongs to whoever stood there last. Up to two armies can share a hex; <b>split</b> and <b>merge</b> them from the army panel.</p></section>
-      <section><h3>${ICONS.sword}Fighting</h3><p>Attacking an adjacent enemy costs 1 movement, once per army per turn. <b>Every unit rolls one die</b> and adds its attack (attackers) or defence plus terrain (defenders: forest +1, mountains +2). Both sides sort their results and compare highest against highest; the higher attacker wins, ties go to the defender. Spare dice are lost. Each loss costs the weakest unit 1 HP.</p></section>
-      <section><h3>${ICONS.home}Cities</h3><p>Recruit in your cities; recruits appear inside and must march out the same turn. Build a new city with an army on your land (2 turns, at least 2 hexes from other cities). Stand next to an enemy city for <b>3 rounds</b> to capture it; each upgrade adds a round. Wounded units heal next to their own cities.</p></section>
-      <section><h3>${ICONS.gold}Gold</h3><p>+1 per plains hex you hold and +2 per city. Units cost 3 / 6 / 9 by tier; the Giants pay double.</p></section>
+      <section><h3>${ICONS.march}Moving</h3><p>Each army has <b>3 movement</b> per turn. Plains and desert cost 1, forest 2, mountains 3; high peaks cannot be crossed. A hex with a friendly army costs 1 less. Land belongs to whoever stood there last. Up to two armies share a hex; <b>split</b>, <b>merge</b> and <b>dismiss</b> (⅓ of the price back) from the army panel. Armies may stand in their own cities.</p></section>
+      <section><h3>${ICONS.sword}Fighting</h3><p>Attacking costs 1 movement, once per army per turn, and has <b>two rounds</b>; after the first you may retreat. <b>Every unit rolls one die</b> plus its attack, or defence plus bonuses (mountain +1, own city +1). Results are sorted and compared highest against highest; ties go to the defender, spare dice are lost. Each lost pair wounds the weakest unit. Killing tier-3 units or wildlings gives 1 gold.</p></section>
+      <section><h3>${ICONS.home}Cities</h3><p>Recruit in your cities; recruits join the garrison. Build a city with an army on your land (2 turns, 2 hexes from other cities). Stand next to an enemy city for <b>3 rounds</b> to capture it; each upgrade adds a round. Units heal next to their own cities.</p></section>
+      <section><h3>${ICONS.gold}Gold</h3><p>Per turn: plains and mountains +1, every 2 forests +1, deserts 0, cities +3 (+4 by the sea). Improve your hexes twice for +1 gold each (3 and 6 gold, 1 turn). Taking a rival's improved hex destroys it for 1–2 gold. Armies above <b>8 units</b> cost 1 gold per extra unit each turn; unpaid armies get low morale (−1 attack and defence).</p></section>
       <section><h3>${ICONS.gear}Controls</h3><p>Choose an army, then a hex to march to or an enemy to attack. Choose a city to recruit. Drag to pan, scroll or pinch to zoom, long-press for details. Keys: <kbd>Tab</kbd> next army, <kbd>Enter</kbd> end turn, <kbd>F</kbd> fit map, <kbd>Esc</kbd> cancel.</p></section>
     </div>`, 'wide');
 }

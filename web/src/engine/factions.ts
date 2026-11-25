@@ -42,7 +42,7 @@ export const FACTIONS: Record<FactionId, FactionDef> = {
     accent: '#5fd35a',
     passive: {
       name: 'Forest Wardens',
-      text: 'Forest grows on every hex they claim. +1 defence in forests.',
+      text: 'Forest grows on every plains or desert hex they claim. +1 defence in forests.',
     },
   },
   giants: {
@@ -72,10 +72,11 @@ export const NEUTRAL = {
 export const FACTION_ORDER: FactionId[] = ['necro', 'elves', 'giants'];
 
 export const TERRAIN_INFO: Record<Terrain, { name: string; text: string }> = {
-  plains: { name: 'Plains', text: 'Move cost 1. +1 gold per turn.' },
-  forest: { name: 'Forest', text: 'Move cost 2. Defenders +1.' },
-  mountain: { name: 'Mountains', text: 'Move cost 3. Defenders +2.' },
-  desert: { name: 'Desert', text: 'Move cost 1.' },
+  plains: { name: 'Plains', text: 'Move 1 · +1 gold.' },
+  forest: { name: 'Forest', text: 'Move 2 · +1 gold per 2 forests.' },
+  mountain: { name: 'Mountains', text: 'Move 3 · +1 gold · defenders +1.' },
+  peak: { name: 'High peak', text: 'Impassable.' },
+  desert: { name: 'Desert', text: 'Move 1 · no gold.' },
   water: { name: 'Sea', text: 'Impassable.' },
 };
 

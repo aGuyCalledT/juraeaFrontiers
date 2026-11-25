@@ -25,7 +25,7 @@ export const UNIT_STATS: Record<UnitType, UnitStats> = {
     type: 'priest', name: 'Death Priest', plural: 'Death Priests', faction: 'necro', tier: 3, attack: 1, defense: 1, hp: 2,
     ability: 'Adds 3 raising rolls per priest after a fight (1 per fallen unit if fewer than 3 died).',
   },
-  archer: { type: 'archer', name: 'Elven Archer', plural: 'Elven Archers', faction: 'elves', tier: 1, attack: 1, defense: 1, hp: 1 },
+  archer: { type: 'archer', name: 'Elven Archer', plural: 'Elven Archers', faction: 'elves', tier: 1, attack: 1, defense: 0, hp: 1 },
   druid: {
     type: 'druid', name: 'Druid', plural: 'Druids', faction: 'elves', tier: 2, attack: 1, defense: 1, hp: 2,
     ability: 'Enchants the forest it stands on: +1 defence there; every 3 enchanted forests give +1 gold.',
@@ -60,6 +60,21 @@ export function baseCost(f: FactionId): number {
   return unitCost(FACTION_UNITS[f][0]);
 }
 
+/** Gold back when a unit is dismissed: a third of its price. */
+export function refund(type: UnitType): number {
+  return Math.floor(unitCost(type) / 3);
+}
+
+/** Gold for killing a unit: tier 3 units and wildlings give 1. */
+export function bounty(type: UnitType): number {
+  const s = UNIT_STATS[type];
+  return s.tier === 3 || s.faction === 'neutral' ? 1 : 0;
+}
+
+export const IMPROVE_COST = [3, 6] as const; // level 1, level 2 (the same for everyone)
+export const MAX_IMPROVE = 2;
+export const ARMY_FREE_SIZE = 8; // every unit above this costs 1 gold per turn
+export const START_GOLD = 10;
 export const CITY_COST = (f: FactionId) => baseCost(f) * 3;
 export const UPGRADE_COST = (f: FactionId) => baseCost(f) * 2;
 export const MAX_CITY_LEVEL = 3;
