@@ -1,0 +1,79 @@
+/* Unit sprite animations (see units.ts for the part classes). */
+.sprite { overflow: visible; display: block; }
+.sprite .u-rig, .sprite .u-weapon, .sprite .u-head, .sprite .u-arrow, .sprite .u-fx, .sprite .u-shadow, .sprite .u-arm-l { transform-box: view-box; }
+.sprite .u-rig { transform-origin: 60px 110px; }
+.sprite .u-head { transform-origin: 60px 50px; }
+.sprite .u-shadow { transform-origin: 60px 110px; }
+.sprite .u-fx { opacity: 0; transform-origin: 100px 30px; }
+.sprite.s-cannon .u-fx { transform-origin: 104px 68px; }
+
+/* Idle: everyone breathes; casters float; heads nod a little. */
+.sprite.idle .u-rig { animation: u-breathe 2.6s ease-in-out infinite; }
+.sprite.idle .u-float { animation: u-float 3s ease-in-out infinite; }
+.sprite.idle .u-head { animation: u-nod 2.6s ease-in-out infinite; }
+.sprite.idle.s-cast .u-weapon { animation: u-staff 3s ease-in-out infinite; }
+.sprite[data-unit='mammoth'].idle .u-weapon { animation: u-trunk 3.2s ease-in-out infinite; }
+@keyframes u-breathe { 0%, 100% { transform: scale(1, 1); } 50% { transform: scale(1.015, 0.975); } }
+@keyframes u-float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-4px); } }
+@keyframes u-nod { 0%, 100% { transform: rotate(0); } 50% { transform: rotate(-2deg); } }
+@keyframes u-staff { 0%, 100% { transform: rotate(0); } 50% { transform: rotate(3deg); } }
+@keyframes u-trunk { 0%, 100% { transform: rotate(0); } 50% { transform: rotate(4deg); } }
+
+/* Attack: swing (melee) */
+.sprite.a-attack.s-swing .u-rig { animation: u-lunge 0.7s cubic-bezier(.3, 0, .2, 1); }
+.sprite.a-attack.s-swing .u-weapon { animation: u-swing 0.7s cubic-bezier(.5, 0, .2, 1); }
+@keyframes u-lunge { 0% { transform: none; } 35% { transform: translateX(-4px) rotate(-3deg); } 60% { transform: translateX(10px) rotate(4deg); } 100% { transform: none; } }
+@keyframes u-swing { 0% { transform: rotate(0); } 35% { transform: rotate(-55deg); } 55% { transform: rotate(50deg); } 70% { transform: rotate(40deg); } 100% { transform: rotate(0); } }
+
+/* Attack: cast (staffs) */
+.sprite.a-attack.s-cast .u-weapon { animation: u-raise 0.7s cubic-bezier(.3, 0, .2, 1); }
+.sprite.a-attack.s-cast .u-fx { animation: u-burst 0.7s ease-out; }
+.sprite.a-attack.s-cast .u-rig { animation: u-lift 0.7s ease-in-out; }
+@keyframes u-raise { 0% { transform: rotate(0); } 40% { transform: rotate(-14deg) translateY(-8px); } 70% { transform: rotate(10deg); } 100% { transform: rotate(0); } }
+@keyframes u-burst { 0%, 30% { opacity: 0; transform: scale(.3); } 50% { opacity: 1; transform: scale(1.15); } 100% { opacity: 0; transform: scale(1.5); } }
+@keyframes u-lift { 0%, 100% { transform: none; } 45% { transform: translateY(-6px); } }
+
+/* Attack: shoot (bow) */
+.sprite.a-attack.s-shoot .u-weapon { animation: u-draw 0.7s ease-in-out; }
+.sprite.a-attack.s-shoot .u-arrow { animation: u-loose 0.7s cubic-bezier(.4, 0, .2, 1); }
+@keyframes u-draw { 0%, 100% { transform: none; } 45% { transform: translateX(-3px) rotate(-4deg); } 55% { transform: translateX(2px); } }
+@keyframes u-loose { 0% { transform: none; opacity: 1; } 45% { transform: translateX(-8px); opacity: 1; } 75% { transform: translateX(80px); opacity: 0; } 76% { transform: translateX(-30px); opacity: 0; } 100% { transform: none; opacity: 1; } }
+
+/* Attack: cannon (Lead Belcher) */
+.sprite.a-attack.s-cannon .u-weapon { animation: u-recoil 0.7s cubic-bezier(.2, 0, .2, 1); }
+.sprite.a-attack.s-cannon .u-rig { animation: u-kick 0.7s ease-out; }
+.sprite.a-attack.s-cannon .u-fx { animation: u-flash 0.7s ease-out; }
+.sprite.a-attack.s-cannon .u-smoke { transform-box: fill-box; transform-origin: center; animation: u-smoke 0.7s ease-out; }
+@keyframes u-recoil { 0%, 25% { transform: none; } 32% { transform: translateX(-12px) rotate(-6deg); } 100% { transform: none; } }
+@keyframes u-kick { 0%, 25% { transform: none; } 32% { transform: translateX(-5px) scale(1.03, .96); } 100% { transform: none; } }
+@keyframes u-flash { 0%, 25% { opacity: 0; transform: scale(.4); } 32% { opacity: 1; transform: scale(1.2); } 60% { opacity: .9; transform: scale(1); } 100% { opacity: 0; transform: scale(1.1); } }
+@keyframes u-smoke { 0%, 30% { transform: scale(.3); } 100% { transform: translate(10px, -14px) scale(1.8); opacity: 0; } }
+
+/* Attack: stomp (Mammoth rears up and slams) */
+.sprite.a-attack.s-stomp .u-rig { animation: u-rear 0.7s cubic-bezier(.4, 0, .3, 1); }
+.sprite.a-attack.s-stomp .u-weapon { animation: u-toss 0.7s cubic-bezier(.4, 0, .3, 1); }
+.sprite.a-attack.s-stomp .u-shadow { animation: u-shadow-pulse 0.7s ease-out; }
+@keyframes u-rear { 0% { transform: none; } 40% { transform: rotate(-12deg) translateY(-4px); } 60% { transform: rotate(3deg) translateX(6px) scale(1.04, .94); } 100% { transform: none; } }
+@keyframes u-toss { 0% { transform: rotate(0); } 40% { transform: rotate(-18deg); } 60% { transform: rotate(14deg); } 100% { transform: rotate(0); } }
+@keyframes u-shadow-pulse { 55% { transform: scale(1); } 65% { transform: scale(1.3, 1.5); opacity: .35; } 100% { transform: scale(1); } }
+
+/* Hit: red flash and knock-back */
+.sprite.a-hit .u-rig { animation: u-hit 0.45s ease-out; }
+@keyframes u-hit {
+  0% { transform: none; filter: none; }
+  15% { transform: translateX(-8px) rotate(-5deg); filter: brightness(1.6) sepia(1) saturate(6) hue-rotate(-40deg); }
+  40% { transform: translateX(4px) rotate(2deg); filter: brightness(1.2) sepia(.6) saturate(4) hue-rotate(-40deg); }
+  100% { transform: none; filter: none; }
+}
+
+/* Death: topple backwards and fade; skeletons crumble instead */
+.sprite.a-die .u-rig { animation: u-die 0.9s cubic-bezier(.5, 0, .7, .4) forwards; }
+.sprite.a-die .u-shadow { animation: u-fade 0.9s ease-in forwards; }
+.sprite[data-unit='skeleton'].a-die .u-rig { animation: u-crumble 0.9s ease-in forwards; }
+@keyframes u-die { 0% { transform: none; opacity: 1; } 40% { transform: translateX(-4px) rotate(-14deg); } 100% { transform: translate(-14px, 4px) rotate(-82deg); opacity: 0; } }
+@keyframes u-crumble { 0% { transform: none; opacity: 1; } 30% { transform: scale(1.04, .9); } 100% { transform: scale(1.3, .05); opacity: 0; } }
+@keyframes u-fade { to { opacity: 0; } }
+
+@media (prefers-reduced-motion: reduce) {
+  .sprite *, .sprite { animation: none !important; }
+}
