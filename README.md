@@ -53,7 +53,17 @@ Fleeing the corruption of their ancestral woods, the Elves of the Evergarden see
 
 ---
 
-*Instructions on how to compile and run the game in your terminal will be added here once the alpha build is released.*
+## Play in the browser
+
+The web version (Risk-style hex conquest with cartoon art, AI, hotseat and online play) lives in [`web/`](web/README.md):
+
+```bash
+cd web && npm install && npm run dev
+```
+
+`npm run build` produces a static `web/dist/` folder to upload to any website. The optional online relay is in `server/`.
+
+*Instructions on how to compile and run the console game will be added here once the alpha build is released.*
 
 ```bash
 # Example Placeholder Commands
