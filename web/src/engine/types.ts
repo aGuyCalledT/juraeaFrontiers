@@ -17,6 +17,8 @@ export interface Tile {
   enchanted: boolean;
   /** Improvement level 0..2, each +1 gold per turn. */
   improved: number;
+  /** Necromancers blighted this forest: move cost 1, no elven bonus. */
+  corrupted: boolean;
   deco: number;
 }
 
@@ -78,6 +80,8 @@ export interface PlayerState {
   gold: number;
   /** consecutive own turns started without a city */
   noCity: number;
+  /** Own turns until the faction spell is ready (0 = ready). */
+  spell: number;
   kills: number;
 }
 
@@ -88,7 +92,7 @@ export interface GameSetup {
 }
 
 export interface GameState {
-  version: 3;
+  version: 4;
   setup: GameSetup;
   rng: number;
   radius: number;
@@ -105,6 +109,8 @@ export interface GameState {
   winner: FactionId | null;
   actionCount: number;
   pendingFight: PendingFight | null;
+  fortresses: { tile: number; discovered: boolean }[];
+  walls: { tile: number; hp: number }[];
 }
 
 export type Action =
@@ -112,7 +118,10 @@ export type Action =
   | { type: 'attack'; p: FactionId; army: number; target: number }
   | { type: 'split'; p: FactionId; army: number; units: number[] }
   | { type: 'merge'; p: FactionId; tile: number }
-  | { type: 'recruit'; p: FactionId; city: number; unit: UnitType }
+  | { type: 'recruit'; p: FactionId; city: number; unit: UnitType; at?: number }
+  | { type: 'hire'; p: FactionId; fortress: number; unit: UnitType; army: number }
+  | { type: 'terraform'; p: FactionId; army: number; target: number }
+  | { type: 'spell'; p: FactionId; army: number; target?: number }
   | { type: 'build'; p: FactionId; army: number }
   | { type: 'upgrade'; p: FactionId; city: number }
   | { type: 'enchant'; p: FactionId; army: number }
@@ -165,6 +174,10 @@ export interface CombatEvent {
   raise: RaiseResult | null;
   defenderWiped: boolean;
   attackerWiped: boolean;
+  /** Arrow Rain: only the defenders can be hurt. */
+  volley?: boolean;
+  /** The defender is a Stone Wall. */
+  wall?: boolean;
   terrainBonus: string[];
   attackMods: string[];
   round: 1 | 2;
@@ -186,6 +199,11 @@ export type GameEvent =
   | { type: 'dismissed'; p: FactionId; army: number; units: number; refund: number }
   | { type: 'upkeep'; p: FactionId; paid: number; unpaid: number; armies: number[] }
   | { type: 'pillaged'; p: FactionId; tile: number; gold: number }
+  | { type: 'terraformed'; p: FactionId; tile: number; to: 'plains' | 'corrupted' | 'forest' | 'cleansed' }
+  | { type: 'discovered'; p: FactionId; tile: number }
+  | { type: 'hired'; p: FactionId; fortress: number; unit: UnitType; army: number }
+  | { type: 'spellCast'; p: FactionId; spell: 'colossus' | 'volley' | 'wall'; army: number; tile: number }
+  | { type: 'wallFallen'; p: FactionId; tile: number }
   | { type: 'enchanted'; p: FactionId; tile: number }
   | { type: 'healed'; p: FactionId; units: { army: number; unit: number; by: 'city' | 'mammoth' }[] }
   | { type: 'siege'; p: FactionId; city: number; rounds: number; needed: number }

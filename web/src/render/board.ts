@@ -192,12 +192,14 @@ export class Board {
       const armies = state.armies.filter((a) => a.tile === t.id);
       const city = state.cities.find((c) => c.tile === t.id);
       const build = state.builds.find((b) => b.tile === t.id);
-      const sig = JSON.stringify([t.terrain, t.owner, t.enchanted, t.improved, armies.map((a) => [a.id, a.owner, a.mp, a.attacked, a.lowMorale, a.units.map((u) => u.type + u.hp)]), city, build, cur, city && armies.length]);
+      const fort = state.fortresses.find((fo) => fo.tile === t.id && fo.discovered);
+      const wall = state.walls.find((w) => w.tile === t.id);
+      const sig = JSON.stringify([t.terrain, t.owner, t.enchanted, t.improved, t.corrupted, !!fort, wall?.hp, armies.map((a) => [a.id, a.owner, a.mp, a.attacked, a.lowMorale, a.units.map((u) => u.type + u.hp)]), city, build, cur, city && armies.length]);
       if (!force && sig === v.last) continue;
       v.last = sig;
       changed.push(t.id);
-      const hasBuilding = !!city || build?.kind === 'city';
-      const decoKey = t.terrain + (hasBuilding ? '*' : '');
+      const hasBuilding = !!city || build?.kind === 'city' || !!fort;
+      const decoKey = t.terrain + (hasBuilding ? '*' : '') + (t.corrupted ? '!' : '');
       if (v.terrain !== decoKey) {
         v.terrain = decoKey;
         v.top.setAttribute('fill', `url(#g-${t.terrain})`);
@@ -214,6 +216,8 @@ export class Board {
       // Buildings
       let b = '';
       if (t.enchanted) b += use('s-sparkle', -30, -24, 22) + use('s-sparkle', 32, -6, 16);
+      if (fort) b += use('s-fortress', 0, 0, 70);
+      v.g.classList.toggle('corrupted', t.corrupted);
       if (city) {
         const cf = FACTIONS[city.owner];
         b += use(castleId(city.owner), 0, armies.length ? -14 : city.capital ? -2 : -6, city.capital ? 64 : 54, `style="color:${cf.color}"`);
@@ -236,6 +240,10 @@ export class Board {
       if (city) {
         const sieges = Object.entries(city.siege).filter(([, n]) => n);
         sieges.forEach(([f, n], i) => { top += siegeMarker(f as FactionId, n!, 3 + city.level, 0, -78 - i * 26); });
+      }
+      if (wall) {
+        top += use('unit-wall', 0, 30, 84, 'style="color:#e0452f"');
+        for (let i = 0; i < wall.hp; i++) top += `<circle cx="${-8 + i * 16}" cy="38" r="6" fill="#ff6b5a" stroke="${INK}" stroke-width="2.5"/>`;
       }
       if (build) top += buildMarker(build.kind, build.turnsLeft, build.kind === 'improve' ? 30 : 26, build.kind === 'improve' ? -30 : -46);
       v.badgeIn.innerHTML = top;

@@ -898,3 +898,9 @@ input::placeholder { color: rgba(43, 29, 20, 0.62); }
   .bname { display: none; }
   .bcell .portrait { width: 40px; height: 44px; }
 }
+
+/* ================= Rules v2.2 ================= */
+.btn.spell { --b1: #b07cff; --b2: #6b3fb0; --be: #3b2265; animation: count-pulse 1.6s ease-in-out infinite; }
+.res-spell b { font-size: 16px; }
+.res-spell.hot { animation: hot 1.1s ease-in-out infinite; }
+.tile.corrupted .top { filter: saturate(0.45) hue-rotate(-40deg) brightness(0.85); }

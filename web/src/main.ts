@@ -39,7 +39,7 @@ function loadSave(): GameState | null {
     const raw = localStorage.getItem('jf-save');
     if (!raw) return null;
     const s = JSON.parse(raw) as GameState;
-    return s.version === 3 && s.phase !== 'over' ? s : null;
+    return s.version === 4 && s.phase !== 'over' ? s : null;
   } catch { return null; }
 }
 

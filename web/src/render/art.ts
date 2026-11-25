@@ -232,6 +232,26 @@ export const SYMBOLS = `
   <path d="M22 76 L22 36 M78 76 L78 36" stroke="${INK}" stroke-width="7" stroke-linecap="round"/><path d="M22 76 L22 36 M78 76 L78 36" stroke="#8a5a2b" stroke-width="3"/>
   <path d="M14 40 L50 18 L86 40 Z" fill="#c94f3a" ${S}/>
 </symbol>
+<symbol id="s-fortress" viewBox="0 0 100 100">
+  <path d="M4 96 L30 34 Q38 20 46 32 L56 20 Q62 12 68 22 L96 96 Z" fill="#8f8a85" ${S}/>
+  <path d="M26 96 L26 58 L36 58 L36 64 L46 64 L46 58 L56 58 L56 64 L66 64 L66 58 L76 58 L76 96 Z" fill="#b8925a" ${S}/>
+  <path d="M40 96 L40 78 Q51 66 62 78 L62 96 Z" fill="#3b2617" ${S4}/>
+  <path d="M42 80 L60 80 M51 70 L51 96" stroke="#ffd23f" stroke-width="3"/>
+  <path d="M50 58 L50 30" stroke="${INK}" stroke-width="5" stroke-linecap="round"/>
+  <path d="M51 30 L72 36 L51 42 Z" fill="#3e6fb3" ${S4}/>
+  <path d="M30 74 L36 74 M66 74 L72 74" stroke="#ffd23f" stroke-width="4" stroke-linecap="round"/>
+</symbol>
+<symbol id="s-deadtree" viewBox="0 0 100 100">
+  <path d="M46 94 L48 50 L36 36 M48 60 L62 42 L70 46 M48 50 L50 30" stroke="${INK}" stroke-width="10" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+  <path d="M46 94 L48 50 L36 36 M48 60 L62 42 L70 46 M48 50 L50 30" stroke="#5a3d55" stroke-width="5" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+  <circle cx="36" cy="36" r="5" fill="#8dff5a" ${S4}/>
+</symbol>
+<symbol id="s-unknown" viewBox="0 0 100 100">
+  <path d="M4 96 L36 30 Q46 16 56 30 L96 96 Z" fill="#7d7884" ${S}/>
+  <path d="M40 62 Q40 48 50 48 Q60 48 60 58 Q60 66 52 68 L52 76" stroke="${INK}" stroke-width="10" fill="none" stroke-linecap="round"/>
+  <path d="M40 62 Q40 48 50 48 Q60 48 60 58 Q60 66 52 68 L52 76" stroke="#ffd23f" stroke-width="5" fill="none" stroke-linecap="round"/>
+  <circle cx="52" cy="88" r="5" fill="#ffd23f" ${S4}/>
+</symbol>
 <symbol id="s-star" viewBox="0 0 100 100">
   <path d="M50 8 L62 38 L94 40 L69 60 L78 92 L50 74 L22 92 L31 60 L6 40 L38 38 Z" fill="#ffd23f" ${S}/>
 </symbol>
@@ -266,6 +286,11 @@ export function decorations(t: Tile, hasBuilding = false): string {
   const j = (v: number) => v + (r() - 0.5) * 6;
   switch (t.terrain) {
     case 'forest': {
+      if (t.corrupted) {
+        const spots: [number, number][] = hasBuilding ? [[-38, 0], [34, 4]] : [[-24, -24], [8, -32], [30, -12], [-36, 0], [-2, -6]];
+        for (const [x, y] of spots) items.push(['s-deadtree', j(x), j(y), 30]);
+        break;
+      }
       const slots: [number, number][] = [[-24, -24], [6, -34], [30, -14], [-38, 0], [-4, -8], [24, 8], [34, -36]];
       const n = hasBuilding ? 3 : 5 + Math.floor(r() * 2);
       const pick = hasBuilding ? [[-38, 0], [34, 4], [36, -30]] : slots.slice(0, n);

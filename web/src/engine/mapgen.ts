@@ -20,6 +20,7 @@ export interface MapData {
   armies: Army[];
   cities: City[];
   nextId: number;
+  fortresses: { tile: number; discovered: boolean }[];
 }
 
 export function buildNeighbors(tiles: Tile[]): number[][] {
@@ -39,7 +40,7 @@ export function generateMap(setup: GameSetup): MapData {
     const r2 = Math.min(radius, -q + radius);
     for (let r = r1; r <= r2; r++) {
       tiles.push({
-        id: tiles.length, q, r, terrain: 'water', region: -1, owner: null, enchanted: false, improved: 0, deco: rng.int(1 << 30),
+        id: tiles.length, q, r, terrain: 'water', region: -1, owner: null, enchanted: false, improved: 0, corrupted: false, deco: rng.int(1 << 30),
       });
     }
   }
@@ -205,15 +206,32 @@ export function generateMap(setup: GameSetup): MapData {
     peaks--;
   }
 
+  // Two dwarf fortresses on mountains, far from every capital and from each other.
+  const fortresses: { tile: number; discovered: boolean }[] = [];
+  const mts = land.filter((t) => t.terrain === 'mountain' && t.owner === null);
+  for (let i = 0; i < 2 && mts.length; i++) {
+    let best: Tile | null = null;
+    let bestScore = -1;
+    for (const m of mts) {
+      if (fortresses.some((fo) => fo.tile === m.id)) continue;
+      const others = [...homes, ...fortresses.map((fo) => fo.tile)];
+      const score = Math.min(...others.map((h) => hexDistance(tiles[h].q, tiles[h].r, m.q, m.r))) + rng.next();
+      if (score > bestScore && nb[m.id].some((x) => tiles[x].terrain !== 'water' && tiles[x].terrain !== 'peak')) { bestScore = score; best = m; }
+    }
+    if (!best) break;
+    fortresses.push({ tile: best.id, discovered: false });
+    best.owner = null;
+  }
+
   // Neutral wildlings on roughly every fourth free hex, away from the capitals.
-  const free = rng.shuffle(land.filter((t) => t.owner === null && t.terrain !== 'peak' && homes.every((h) => hexDistance(tiles[h].q, tiles[h].r, t.q, t.r) >= 2)));
+  const free = rng.shuffle(land.filter((t) => t.owner === null && t.terrain !== 'peak' && !fortresses.some((fo) => fo.tile === t.id) && homes.every((h) => hexDistance(tiles[h].q, tiles[h].r, t.q, t.r) >= 2)));
   free.slice(0, Math.round(land.length / 4)).forEach((t) => {
     t.owner = 'neutral';
     const n = 1 + rng.int(3) + (t.terrain === 'mountain' ? 1 : 0);
     mkArmy('neutral', t.id, Array(n).fill('wildling'));
   });
 
-  return { radius, tiles, regions, neighbors: nb, armies, cities, nextId };
+  return { radius, tiles, regions, neighbors: nb, armies, cities, nextId, fortresses };
 }
 
 /** Every passable land hex must stay reachable from the first capital. */
