@@ -78,7 +78,7 @@ function showTitle() {
   const host = app.querySelector('.title-board') as HTMLElement;
   const demo = createGame({ seed: randomSeed(), size: 'medium', slots: FACTION_ORDER.map((f) => ({ faction: f, kind: 'ai', name: '', controller: '' })) }).state;
   titleBoard = new Board(host, { onTileClick: () => {}, onTileHover: () => {} });
-  titleBoard.insets = innerWidth < 760 ? { top: 150, bottom: 260, left: 0, right: 0 } : { top: 170, bottom: 190, left: 40, right: 40 };
+  titleBoard.insets = innerWidth < 760 ? { top: 205, bottom: 250, left: 14, right: 14 } : { top: 170, bottom: 190, left: 40, right: 40 };
   titleBoard.build(demo);
   fx.introDrop(titleBoard);
   const t0 = performance.now();

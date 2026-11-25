@@ -1,0 +1,17 @@
+{
+  "detector": {
+    "ignoreRules": [],
+    "ignoreFiles": [],
+    "ignoreValues": [
+      {
+        "rule": "side-tab",
+        "value": "*",
+        "files": [
+          "src/styles.css"
+        ],
+        "createdAt": "2026-11-25T08:36:43.073Z",
+        "reason": "Claude triage: .plank inset bottom shadow is the wooden board's thickness bevel (Kingdom Rush material pinned in the brief), not a coloured card accent"
+      }
+    ]
+  }
+}

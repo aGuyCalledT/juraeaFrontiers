@@ -135,6 +135,7 @@ export class GameController {
     if (this.busy || this.destroyed) return;
     this.busy = true;
     this.el.classList.add('is-busy');
+    this.renderHint();
     while (this.queue.length && !this.destroyed) {
       const a = this.queue.shift()!;
       const prev = this.state;
@@ -227,7 +228,7 @@ export class GameController {
         case 'combat': {
           this.hideTooltip();
           this.board.focus([e.from, e.to]);
-          fx.showAim(this.board, e.from, e.to, 'attack');
+          fx.showAim(this.board, e.from, e.to, 'attack', e.p);
           sfx.whoosh();
           await fx.volley(this.board, e.from, e.to, e.p, Math.min(3, prev.tiles[e.from].troops - 1));
           await this.dice.play(e.p, e.defender, e.rounds, e.attMods, e.defMods, {
@@ -398,7 +399,7 @@ export class GameController {
     if (this.selected === null || this.hoverTile === null) { fx.clearAim(this.board); return; }
     const f = currentPlayer(s).faction;
     const t = s.tiles[this.hoverTile];
-    if (s.phase === 'attack' && t.owner !== f && neighbors(s)[this.selected].includes(t.id)) fx.showAim(this.board, this.selected, t.id, 'attack');
+    if (s.phase === 'attack' && t.owner !== f && neighbors(s)[this.selected].includes(t.id)) fx.showAim(this.board, this.selected, t.id, 'attack', f);
     else if (s.phase === 'fortify' && t.owner === f && t.id !== this.selected && reachable(s, this.selected, f).has(t.id)) fx.showAim(this.board, this.selected, t.id, 'move');
     else fx.clearAim(this.board);
   }
@@ -474,11 +475,11 @@ export class GameController {
   private measureInsets() {
     const mobile = innerWidth < 760;
     this.board.insets = mobile
-      ? { top: 168, bottom: 172, left: 6, right: 6 }
+      ? { top: 178, bottom: 172, left: 6, right: 6 }
       : { top: 92, bottom: 128, left: 24, right: innerWidth > 1100 ? 250 : 24 };
     addEventListener('resize', () => {
       const m = innerWidth < 760;
-      this.board.insets = m ? { top: 168, bottom: 172, left: 6, right: 6 } : { top: 92, bottom: 128, left: 24, right: innerWidth > 1100 ? 250 : 24 };
+      this.board.insets = m ? { top: 178, bottom: 172, left: 6, right: 6 } : { top: 92, bottom: 128, left: 24, right: innerWidth > 1100 ? 250 : 24 };
     });
   }
 
@@ -538,7 +539,7 @@ export class GameController {
     if (crestEl.dataset.f !== p.faction) { crestEl.dataset.f = p.faction; crestEl.innerHTML = crest(p.faction); }
     this.q('.turn-name').textContent = fac.short;
     const who = mine ? (this.online || s.players.filter((x) => x.kind === 'human').length > 1 ? `${p.name}, your move` : 'Your move') : p.kind === 'ai' ? 'AI is plotting…' : `${p.name} is playing…`;
-    this.q('.turn-sub').textContent = `Round ${s.turn} · ${who}`;
+    this.q('.turn-sub').innerHTML = `<span class="turn-round">Round ${s.turn} · </span>${esc(who)}`;
     this.el.querySelectorAll<HTMLElement>('.phases li').forEach((li) => {
       const order = ['reinforce', 'attack', 'fortify'];
       li.classList.toggle('active', li.dataset.phase === s.phase);
@@ -580,7 +581,7 @@ export class GameController {
     const prim = this.q<HTMLButtonElement>('.primary');
     prim.classList.toggle('hidden', !mine);
     const label = s.phase === 'reinforce'
-      ? p.reinforcements > 0 ? `Place ${p.reinforcements} troop${p.reinforcements > 1 ? 's' : ''}` : 'To battle!'
+      ? p.reinforcements > 0 ? (innerWidth < 760 ? `${p.reinforcements} to place` : `${p.reinforcements} troop${p.reinforcements > 1 ? 's' : ''} to place`) : 'To battle!'
       : s.phase === 'attack' ? 'Fortify' : 'End turn';
     this.q('.primary-label').textContent = label;
     prim.classList.toggle('waiting', s.phase === 'reinforce' && p.reinforcements > 0);
@@ -622,15 +623,21 @@ export class GameController {
     if (!mine) return;
     let t = '';
     let c = '';
+    if (this.busy) {
+      t = s.phase === 'attack' ? 'Battle! The dice decide…' : 'Your orders are being carried out…';
+      if (text.textContent !== t) text.textContent = t;
+      chips.innerHTML = '';
+      return;
+    }
     const chip = (attr: string, label: string, on: boolean) => `<button class="chip ${on ? 'on' : ''}" ${attr}>${label}</button>`;
     if (this.mode === 'champion') {
-      t = `Tap one of your hexes to station your ${fac.units.special}.`;
+      t = `Choose one of your hexes for your ${fac.units.special}.`;
       c = chip('data-cancel', 'Cancel', false);
     } else if (this.mode === 'ability') {
       t = fac.ability.verb + '.';
       c = chip('data-cancel', 'Cancel', false);
     } else if (s.phase === 'reinforce') {
-      t = p.reinforcements > 0 ? 'Tap your hexes to place troops.' : 'All troops placed. Buy more, or march to battle.';
+      t = p.reinforcements > 0 ? 'Choose your hexes to place troops.' : 'All troops placed. Buy more, or march to battle.';
       c = chip('data-place="1"', '+1', this.placeAmount === 1) + chip('data-place="5"', '+5', this.placeAmount === 5) + chip('data-place="all"', 'All', this.placeAmount === 'all');
     } else if (s.phase === 'attack') {
       t = this.selected === null ? 'Pick a hex with 2+ troops to attack from.' : 'Now pick an adjacent enemy hex.';
@@ -865,7 +872,7 @@ export class GameController {
     const rows = s.players.map((pl) => `<tr class="${pl.faction === f ? 'win' : ''}"><td>${crest(pl.faction, 'mini-crest')}${FACTIONS[pl.faction].short}</td><td>${ownedTiles(s, pl.faction).length}</td><td>${pl.kills}</td><td>${pl.alive ? (pl.faction === f ? 'Victor' : 'Defeated') : 'Fallen'}</td></tr>`).join('');
     const card = this.openModal(`
       <div class="victory-crest">${crest(f, 'big-crest')}</div>
-      <h2>${fac.name} rule Juräa!</h2>
+      <h2>${fac.name} ${f === 'elves' ? 'rules' : 'rule'} Juräa!</h2>
       <p class="sub">${reason === 'last' ? 'Every rival capital has fallen.' : 'They hold three quarters of the continent.'} Round ${s.turn}.</p>
       <p class="quote">“${fac.quote}”</p>
       <table class="stats"><thead><tr><th>Faction</th><th>Hexes</th><th>Slain</th><th></th></tr></thead><tbody>${rows}</tbody></table>

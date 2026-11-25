@@ -104,22 +104,22 @@ function bezier(a: { x: number; y: number }, b: { x: number; y: number }, lift: 
 }
 
 /** Persistent aiming arrow between two hexes (attack / fortify preview). */
-export function showAim(board: Board, from: number, to: number | null, kind: 'attack' | 'move') {
+export function showAim(board: Board, from: number, to: number | null, kind: 'attack' | 'move', f?: FactionId) {
   const layer = board.arrowLayer;
   layer.replaceChildren();
   if (to === null) return;
   const a = board.center(from);
   const b = board.center(to);
   const ang = Math.atan2(b.y - a.y, b.x - a.x);
-  const s = { x: a.x + Math.cos(ang) * 22, y: a.y + Math.sin(ang) * 22 - 8 };
-  const e = { x: b.x - Math.cos(ang) * 26, y: b.y - Math.sin(ang) * 26 - 8 };
-  const bz = bezier(s, e, 34);
+  const s = { x: a.x + Math.cos(ang) * 12, y: a.y + Math.sin(ang) * 12 - 22 };
+  const e = { x: b.x - Math.cos(ang) * 14, y: b.y - Math.sin(ang) * 14 - 16 };
+  const bz = bezier(s, e, 78);
   const end = bz.at(1), pre = bz.at(0.9);
   const ha = Math.atan2(end.y - pre.y, end.x - pre.x);
-  const head = [[0, 0], [-20, -13], [-20, 13]].map(([x, y]) => [end.x + x * Math.cos(ha) - y * Math.sin(ha), end.y + x * Math.sin(ha) + y * Math.cos(ha)]);
+  const head = [[6, 0], [-22, -16], [-22, 16]].map(([x, y]) => [end.x + x * Math.cos(ha) - y * Math.sin(ha), end.y + x * Math.sin(ha) + y * Math.cos(ha)]);
   const d = `M${s.x} ${s.y} Q${bz.mx} ${bz.my} ${end.x} ${end.y}`;
-  const color = kind === 'attack' ? '#ff5a3c' : '#7fdc52';
-  layer.innerHTML = `<g class="aim aim-${kind}"><path d="${d}" stroke="${INK}" stroke-width="15" fill="none" stroke-linecap="round"/><path class="aim-dash" d="${d}" stroke="${color}" stroke-width="8" fill="none" stroke-linecap="round" stroke-dasharray="14 12"/><polygon points="${head.map((p) => p.join(',')).join(' ')}" fill="${color}" stroke="${INK}" stroke-width="4" stroke-linejoin="round"/></g>`;
+  const color = kind === 'attack' ? (f ? FACTIONS[f].color : '#ff5a3c') : '#7fdc52';
+  layer.innerHTML = `<g class="aim aim-${kind}"><path d="${d}" stroke="${INK}" stroke-width="17" fill="none" stroke-linecap="round" opacity="0.35" transform="translate(0 10)"/><path d="${d}" stroke="${INK}" stroke-width="16" fill="none" stroke-linecap="round"/><path d="${d}" stroke="#fff4dc" stroke-width="10" fill="none" stroke-linecap="round"/><path class="aim-dash" d="${d}" stroke="${color}" stroke-width="8" fill="none" stroke-linecap="round" stroke-dasharray="14 12"/><polygon points="${head.map((p) => p.join(',')).join(' ')}" fill="${color}" stroke="${INK}" stroke-width="4" stroke-linejoin="round"/></g>`;
 }
 
 export function clearAim(board: Board) {

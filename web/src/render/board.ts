@@ -116,6 +116,7 @@ export class Board {
     const nb = neighbors(state);
     const shallow: string[] = [];
     const foam: string[] = [];
+    const coast: string[] = [];
     for (const t of state.tiles) {
       const { x, y } = hexToPixel(t.q, t.r);
       if (t.terrain === 'water') {
@@ -124,6 +125,15 @@ export class Board {
         }
       } else {
         foam.push(`<polygon points="${pts(hexCorners(x, y + THICK, HEX_SIZE * 1.16))}"/>`);
+        // Wave lap: trace each shore edge slightly out to sea.
+        const c = hexCorners(x, y + THICK, HEX_SIZE * 1.3);
+        for (const n of nb[t.id]) {
+          const o = state.tiles[n];
+          if (o.terrain !== 'water') continue;
+          const op = hexToPixel(o.q, o.r);
+          const e = [...c].sort((a, b) => Math.hypot(a[0] - op.x, a[1] - op.y) - Math.hypot(b[0] - op.x, b[1] - op.y));
+          coast.push(`M${e[0][0].toFixed(1)} ${e[0][1].toFixed(1)}L${e[1][0].toFixed(1)} ${e[1][1].toFixed(1)}`);
+        }
       }
     }
     // Scattered animated waves around the island.
@@ -141,7 +151,7 @@ export class Board {
       waves.push(`<g class="wave" style="animation-delay:${(-rnd() * 6).toFixed(2)}s">${use('s-wave', x, y, 34 + rnd() * 20)}</g>`);
     }
     this.layers.sea.innerHTML = `<g class="shallows">${shallow.join('')}</g>${waves.join('')}`;
-    this.layers.foam.innerHTML = `<g class="foam-a">${foam.join('')}</g>`;
+    this.layers.foam.innerHTML = `<path class="coast" d="${coast.join('')}"/><path class="coast coast-2" d="${coast.join('')}"/><g class="foam-a">${foam.join('')}</g>`;
   }
 
   private makeTile(t: Tile): TileView {
