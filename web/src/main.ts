@@ -39,7 +39,7 @@ function loadSave(): GameState | null {
     const raw = localStorage.getItem('jf-save');
     if (!raw) return null;
     const s = JSON.parse(raw) as GameState;
-    return s.version === 4 && s.phase !== 'over' ? s : null;
+    return s.version === 5 && s.phase !== 'over' ? s : null;
   } catch { return null; }
 }
 
@@ -195,6 +195,7 @@ function showHelp() {
       <section><h3>${ICONS.sword}Fighting</h3><p>Attacking costs 1 movement, once per army per turn, and has <b>two rounds</b>; after the first you may retreat. <b>Every unit rolls one die</b> plus its attack, or defence plus bonuses (mountain +1, own city +1). Results are sorted and compared highest against highest; ties go to the defender, spare dice are lost. Each lost pair wounds the weakest unit. Killing tier-3 units or wildlings gives 1 gold.</p></section>
       <section><h3>${ICONS.home}Cities</h3><p>Recruit in your cities; recruits join the garrison. Build a city with an army on your land (2 turns, 2 hexes from other cities). Stand next to an enemy city for <b>3 rounds</b> to capture it; each upgrade adds a round. Units heal next to their own cities.</p></section>
       <section><h3>${ICONS.gold}Gold</h3><p>Per turn: plains and mountains +1, every 2 forests +1, deserts 0, cities +3 (+4 by the sea). Improve your hexes twice for +1 gold each (3 and 6 gold, 1 turn). Taking a rival's improved hex destroys it for 1–2 gold. Armies above <b>8 units</b> cost 1 gold per extra unit each turn; unpaid armies get low morale (−1 attack and defence).</p></section>
+      <section><h3>${ICONS.bolt}Dwarves &amp; spells</h3><p>Two hidden <b>dwarf fortresses</b> sit in the mountains; an army next to one reveals it for everyone. Armies next to a fortress hire dwarf mercenaries: <b>6 gold</b> for the side that found it, <b>9</b> for everyone else. Each faction has a spell that recharges every 3 rounds. Giant stone walls get +1 HP every 10 rounds. At most 2 tier-3 units plus 1 per city.</p></section>
       <section><h3>${ICONS.gear}Controls</h3><p>Choose an army, then a hex to march to or an enemy to attack. Choose a city to recruit. Drag to pan, scroll or pinch to zoom, long-press for details. Keys: <kbd>Tab</kbd> next army, <kbd>Enter</kbd> end turn, <kbd>F</kbd> fit map, <kbd>Esc</kbd> cancel.</p></section>
     </div>`, 'wide');
 }

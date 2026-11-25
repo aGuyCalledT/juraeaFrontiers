@@ -68,7 +68,7 @@ These are the rules the game implements. Points marked *(assumption)* were not s
 
 ### Death Cults (Necromancers)
 Any Death Cult army can **blight a forest** (own hex or adjacent) instead of attacking: moving through it costs only 1, elves lose all forest bonuses there and its enchantment is gone.
-**Passive:** after every fight they take part in, they roll 1d6 for each unit that died (friend or foe). Every 6 raises a skeleton in their army. Never more skeletons than units died.
+**Passive:** after every fight they take part in, they roll 1d6 for each unit that died (friend or foe). Every **5 or 6** raises a skeleton in their army (v2.3: was 6 only). Never more skeletons than units died.
 
 | Tier | Unit | Attack | Defence | HP | Special |
 |---|---|---|---|---|---|
@@ -93,7 +93,7 @@ Any Death Cult army can **blight a forest** (own hex or adjacent) instead of att
 
 | Tier | Unit | Attack | Defence | HP | Special |
 |---|---|---|---|---|---|
-| 1 | Iron Gut (giant with a huge club) | +2 | +1 | 2 | |
+| 1 | Iron Gut (giant with a huge club) | +1 | +1 | 2 | v2.3: attack was +2. |
 | 2 | Lead Belcher (giant with a ship's cannon) | +2 | +1 | 2 | On a natural 6 he fires again: 4+ wounds the weakest enemy before the exchange (a unit killed this way loses its die). Another 6 fires once more. The first 6 still counts normally *(assumption)*. |
 | 3 | Mammoth | +2 | +4 | 2 | At the start of its turn each mammoth heals 1 HP on the best wounded non-mammoth unit in its army. An army with a mammoth can **clear a forest** (own hex or adjacent) into plains instead of attacking. |
 
@@ -107,12 +107,13 @@ Every faction has one spell. It is ready after 3 of its own turns and recharges 
 |---|---|---|
 | Death Cults | Bone Colossus | 3 skeletons of one army fuse into a Bone Colossus (tier 3: +3 / +1 / 3 HP *(stats are my choice)*). |
 | Evergarden | Arrow Rain | The archers of one army shoot an adjacent enemy army: every archer rolls, highest against highest, the enemy cannot hurt them. Does not use the army's attack *(assumption)*. |
-| Giants | Stone Wall | A wall on an empty hex next to a Giant army. Only Giants can enter it. Others can attack it: it rolls 1 die with +4, has 2 HP *(assumption)*, never strikes back, and attacking it costs all remaining movement. |
+| Giants | Stone Wall | A wall on an empty hex next to a Giant army. Only Giants can enter it. Others can attack it: it rolls 1 die with +4, has **2 HP, +1 for every 10 rounds played** (3 HP from round 10, 4 from round 20…), never strikes back, and attacking it costs all remaining movement. |
 
 ## Dwarf fortresses
 - Every map has **2 dwarf fortresses** on mountains, far from the capitals. Nobody can enter them.
 - They are hidden until any army stands next to one; then everyone can see it.
-- An army standing next to a fortress can hire dwarves for **6 gold** each (the same for every faction *(assumption)*). They join that army.
+- An army standing next to a fortress can hire dwarves. They join that army.
+- Price: **6 gold** for the faction that discovered that fortress, **9 gold** for everyone else (v2.3).
 
 | Unit | Tier | Attack | Defence | HP | Counters |
 |---|---|---|---|---|---|
@@ -127,3 +128,13 @@ Every faction has one spell. It is ready after 3 of its own turns and recharges 
 - Wins: Evergarden 40 %, Giants 45 %, Death Cults 13 %.
 - With **Iron Gut attack +1** (instead of +2): Evergarden 37 %, Giants 30 %, Death Cults 33 % (30 games).
 - Enchanted forests at 1 gold instead of 2: Evergarden fell to about 10 %.
+
+## Balance notes (AI against AI, 150 games, rules v2.3)
+- Average **31 rounds**; 4 % of games hit the 80-round cap.
+- Wins: Evergarden 38 %, Death Cults 37 %, Giants 21 %.
+- Raising on 5–6 lifted the Death Cults from about 12 % to 37 %. With Iron Gut at +1 and dwarves dearer for non-finders, the Giants are now the weakest AI faction.
+
+## Playtesting (v2.3)
+- The pause menu and the victory screen have a **Playtest report**: add notes, then copy it (or it downloads as a text file if the browser blocks the clipboard).
+- The report lists, per faction: result, income, bounty and loot, upkeep, gold spent on units and buildings, recruits, dwarves hired, units slain and lost, spells cast, forests changed, and peak units, cities and hexes.
+- Good things to watch with human players: does one tier-3 unit decide fights, are dwarves bought only as counters, does the stone wall stall games, do the Death Cults snowball with raising on 5–6?

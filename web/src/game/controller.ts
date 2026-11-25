@@ -2,7 +2,7 @@ import { sfx } from '../audio';
 import { aiNextAction } from '../engine/ai';
 import { FACTIONS, NEUTRAL, TERRAIN_INFO } from '../engine/factions';
 import {
-  FACTION_NAME, TERRAIN_COST, applyAction, neighbors, armiesAt, armyById, armyStrength, attackTargets, cityAt, computeIncome, currentPlayer, fortressAt, isCoastal, terraformTargets, tier3Count, tier3Limit, upkeepOf, wallAt,
+  FACTION_NAME, TERRAIN_COST, applyAction, neighbors, armiesAt, armyById, armyStrength, attackTargets, cityAt, computeIncome, currentPlayer, fortressAt, hireCost, isCoastal, terraformTargets, tier3Count, tier3Limit, upkeepOf, wallAt,
   defenseBonus, landTiles, ownArmies, ownCities, ownedTiles, pathTo, reachable, unitCount, validate, type Reach,
 } from '../engine/rules';
 import type { Action, Army, FactionId, GameEvent, GameState, Owner, Tile } from '../engine/types';
@@ -13,6 +13,7 @@ import {
 } from '../engine/unitstats';
 import type { Online, ServerMsg } from '../net/online';
 import { Board } from '../render/board';
+import { playtestReport, shareReport } from './report';
 import * as fx from '../render/fx';
 import { unitSvg } from '../render/units';
 import { DiceTray, portrait } from '../ui/dice';
@@ -549,7 +550,7 @@ export class GameController {
 
   private onKey(e: KeyboardEvent) {
     const tag = (e.target as HTMLElement)?.tagName;
-    if (this.destroyed || tag === 'INPUT' || ((tag === 'BUTTON' || tag === 'SUMMARY') && (e.key === ' ' || e.key === 'Enter'))) return;
+    if (this.destroyed || tag === 'INPUT' || tag === 'TEXTAREA' || ((tag === 'BUTTON' || tag === 'SUMMARY') && (e.key === ' ' || e.key === 'Enter'))) return;
     const k = e.key.toLowerCase();
     if (k === 'escape') { if (this.q('.modal.open')) this.closeModal(); else this.cancel(); }
     else if (k === 'enter') { if (!this.q('.modal.open')) { e.preventDefault(); this.endTurn(); } }
@@ -787,10 +788,12 @@ export class GameController {
     if (this.selFort !== null) {
       const fo = this.selFort;
       const next = ownArmies(s, f).find((x) => neighbors(s)[fo].includes(x.tile));
-      box.innerHTML = `<div class="cmd-head"><b>Dwarf fortress</b><span>Mercenaries join an army standing next to the fortress.${next ? '' : ' <em class="warn">Move an army next to it first.</em>'}</span>${close}</div>
+      const finder = fortressAt(s, fo)?.finder ?? null;
+      box.innerHTML = `<div class="cmd-head"><b>Dwarf fortress</b><span>Mercenaries join an army standing next to the fortress. ${finder === f ? 'You found it: 6 gold each.' : `${finder ? FACTIONS[finder].short + ' found it, so you pay' : 'You pay'} 9 gold.`}${next ? '' : ' <em class="warn">Move an army next to it first.</em>'}</span>${close}</div>
         <div class="recruits">${DWARF_UNITS.map((u) => {
           const st = UNIT_STATS[u];
-          return `<button class="rcard" data-cmd="hire" data-unit="${u}" ${!next || p.gold < unitCost(u) ? 'disabled' : ''} title="${esc(st.ability ?? '')}">${unitSvg(u)}<b>${st.name}</b><span class="rstats">+2/+2 vs ${FACTIONS[st.counters!].short}</span><span class="card-cost">${ICONS.gold}${unitCost(u)}</span></button>`;
+          const cost = hireCost(s, fo, f);
+          return `<button class="rcard" data-cmd="hire" data-unit="${u}" ${!next || p.gold < cost ? 'disabled' : ''} title="${esc(st.ability ?? '')}">${unitSvg(u)}<b>${st.name}</b><span class="rstats">+2/+2 vs ${FACTIONS[st.counters!].short}</span><span class="card-cost">${ICONS.gold}${cost}</span></button>`;
         }).join('')}</div>`;
       return;
     }
@@ -1052,8 +1055,15 @@ export class GameController {
         <div class="seg-label">Animation speed</div>
         <div class="seg">${speeds.map(([v, l]) => `<button class="seg-btn ${fx.motion.speed === v ? 'on' : ''}" data-speed="${v}">${l}</button>`).join('')}</div>
         ${this.online ? '' : '<button class="btn m-restart">New map, same factions</button>'}
+        <button class="btn m-report">${ICONS.book}Playtest report</button>
         <button class="btn ghost m-quit">${ICONS.home}Leave to title</button>
       </div>`, 'small');
+    card.querySelector('.m-report')!.addEventListener('click', () => {
+      const c = this.openModal(`<h2>Playtest report</h2><p class="sub">Round ${this.state.turn}. Add what felt off, then copy it and send it on.</p>${this.reportBlock()}
+        <div class="modal-actions"><button class="btn ghost r-back">Back</button></div>`, 'small');
+      this.bindReport(c);
+      c.querySelector('.r-back')!.addEventListener('click', () => this.openMenu());
+    });
     card.querySelector('.m-resume')!.addEventListener('click', () => this.closeModal());
     card.querySelector('.m-help')!.addEventListener('click', () => { this.closeModal(); this.opts.onHelp(); });
     card.querySelectorAll<HTMLButtonElement>('[data-speed]').forEach((b) => b.addEventListener('click', () => {
@@ -1063,6 +1073,24 @@ export class GameController {
     }));
     card.querySelector('.m-restart')?.addEventListener('click', () => { this.closeModal(); this.opts.onRestart(); });
     card.querySelector('.m-quit')!.addEventListener('click', () => { this.closeModal(); this.opts.onExit(); });
+  }
+
+  /** Notes field plus a button that copies the balance report. */
+  private reportBlock(): string {
+    return `<div class="report">
+      <label class="report-label" for="report-notes">Playtest notes</label>
+      <textarea id="report-notes" class="report-notes" rows="3" placeholder="What felt too strong, too weak or confusing?"></textarea>
+      <button class="btn r-copy">${ICONS.book}Copy playtest report</button>
+    </div>`;
+  }
+
+  private bindReport(card: HTMLElement) {
+    const b = card.querySelector<HTMLButtonElement>('.r-copy')!;
+    b.addEventListener('click', async () => {
+      const notes = card.querySelector<HTMLTextAreaElement>('.report-notes')!.value;
+      const how = await shareReport(playtestReport(this.state, notes), this.state.setup.seed);
+      b.textContent = how === 'copied' ? 'Copied to clipboard' : 'Saved as a file';
+    });
   }
 
   showVictory(f: FactionId) {
@@ -1077,10 +1105,12 @@ export class GameController {
       <p class="sub">Every rival has fallen. Round ${s.turn}.</p>
       <p class="quote">“${fac.quote}”</p>
       <table class="stats"><thead><tr><th>Faction</th><th>Cities</th><th>Units</th><th>Slain</th><th></th></tr></thead><tbody>${rows}</tbody></table>
+      ${this.reportBlock()}
       <div class="modal-actions">
         <button class="btn ghost v-title">${ICONS.home}Title</button>
         ${this.online ? '' : '<button class="btn go v-again">Play again</button>'}
       </div>`, 'victory');
+    this.bindReport(card);
     card.querySelector('.v-title')!.addEventListener('click', () => { this.closeModal(); this.opts.onExit(); });
     card.querySelector('.v-again')?.addEventListener('click', () => { this.closeModal(); this.opts.onRestart(); });
     const owned = ownedTiles(s, f);
