@@ -2,13 +2,13 @@ import { sfx } from '../audio';
 import { aiNextAction } from '../engine/ai';
 import { FACTIONS, NEUTRAL, TERRAIN_INFO } from '../engine/factions';
 import {
-  FACTION_NAME, TERRAIN_COST, applyAction, armiesAt, armyById, armyStrength, attackTargets, cityAt, computeIncome, currentPlayer, isCoastal, upkeepOf,
+  FACTION_NAME, TERRAIN_COST, applyAction, neighbors, armiesAt, armyById, armyStrength, attackTargets, cityAt, computeIncome, currentPlayer, fortressAt, isCoastal, terraformTargets, tier3Count, tier3Limit, upkeepOf, wallAt,
   defenseBonus, landTiles, ownArmies, ownCities, ownedTiles, pathTo, reachable, unitCount, validate, type Reach,
 } from '../engine/rules';
 import type { Action, Army, FactionId, GameEvent, GameState, Owner, Tile } from '../engine/types';
 import {
   ARMY_FREE_SIZE, CITY_COST, FACTION_UNITS, IMPROVE_COST, MAX_CITY_LEVEL, MAX_IMPROVE, MOVE_POINTS, NO_CITY_LIMIT, SIEGE_ROUNDS,
-  UNIT_STATS, UPGRADE_COST, bounty, refund, unitCost,
+  DWARF_UNITS, SPELLS, UNIT_STATS, UPGRADE_COST, bounty, refund, unitCost,
   type UnitType,
 } from '../engine/unitstats';
 import type { Online, ServerMsg } from '../net/online';
@@ -58,6 +58,9 @@ export class GameController {
   private splitPick: Set<number> | null = null;
   private pickMode: 'split' | 'dismiss' = 'split';
   private selTile: number | null = null;
+  private selFort: number | null = null;
+  /** Waiting for a target hex. */
+  private mode: null | 'terraform' | 'volley' | 'wall' | 'treant' = null;
   private reach: Map<number, Reach> = new Map();
   private hoverTile: number | null = null;
   private aiTimer = 0;
@@ -223,13 +226,13 @@ export class GameController {
         }
         case 'combat': {
           this.hideTooltip();
-          if (e.round === 1) {
+          if (e.round === 1 && !e.volley) {
             this.board.focus([e.attacker.tile, e.defender.tile]);
             fx.showAim(this.board, e.attacker.tile, e.defender.tile, 'attack', e.p);
             sfx.whoosh();
             await fx.volley(this.board, e.attacker.tile, e.defender.tile, e.p, Math.min(4, e.attacker.units.length));
           }
-          await this.dice.play(e, { att: FACTION_NAME(e.attacker.owner), def: FACTION_NAME(e.defender.owner) });
+          await this.dice.play(e, { att: FACTION_NAME(e.attacker.owner), def: e.wall ? 'Stone Wall' : FACTION_NAME(e.defender.owner) });
           this.board.sync(this.state);
           const lostA = e.attacker.units.filter((u) => e.dead.includes(u.id)).length;
           const lostD = e.defender.units.filter((u) => e.dead.includes(u.id)).length;
@@ -244,6 +247,42 @@ export class GameController {
         case 'retreat': {
           fx.clearAim(this.board);
           this.toast(`${FACTIONS[e.p].short} call off the attack.`, 'info', e.p);
+          break;
+        }
+        case 'terraformed': {
+          this.board.sync(this.state);
+          if (e.to === 'corrupted') { sfx.doom(); void fx.abilityScene(this.board, e.tile, 'raise', this.q('.board-host')); }
+          else if (e.to === 'plains') { sfx.thud(); fx.shakeTile(this.board, e.tile); fx.floatText(this.board, e.tile, 'Cleared', 'info'); }
+          else { sfx.magic(); void fx.abilityScene(this.board, e.tile, 'enchant', this.q('.board-host')); }
+          break;
+        }
+        case 'discovered': {
+          this.board.sync(this.state);
+          sfx.fanfare();
+          fx.bounceTile(this.board, e.tile, 1.4);
+          this.toast(`${FACTIONS[e.p].short} discovered a dwarf fortress! Everyone can hire dwarves there now.`, 'good', e.p);
+          break;
+        }
+        case 'hired': {
+          this.board.sync(this.state);
+          sfx.coin();
+          const ar = armyById(this.state, e.army);
+          if (ar) fx.placed(this.board, ar.tile, 1);
+          break;
+        }
+        case 'spellCast': {
+          this.board.sync(this.state);
+          sfx.magic();
+          this.toast(`${FACTIONS[e.p].short} cast ${SPELLS[e.p].name}!`, 'info', e.p);
+          if (e.spell === 'colossus') await fx.abilityScene(this.board, e.tile, 'raise', this.q('.board-host'));
+          if (e.spell === 'wall') await fx.abilityScene(this.board, e.tile, 'build', this.q('.board-host'));
+          if (e.spell === 'volley') { const ar = armyById(this.state, e.army); if (ar) await fx.volley(this.board, ar.tile, e.tile, 'elves', 6); }
+          break;
+        }
+        case 'wallFallen': {
+          this.board.sync(this.state);
+          sfx.thud();
+          fx.confetti(this.board, e.tile, ['#b3a998', '#7d7466'], 14);
           break;
         }
         case 'raised': {
@@ -380,6 +419,20 @@ export class GameController {
     return armiesAt(this.state, tile).filter((a) => a.owner === f);
   }
 
+  /** Hexes the current targeting mode accepts. */
+  private modeTargets(): number[] {
+    const s = this.state;
+    const f = currentPlayer(s).faction;
+    const ar = this.selArmy !== null ? armyById(s, this.selArmy) : undefined;
+    switch (this.mode) {
+      case 'terraform': return ar ? terraformTargets(s, ar) : [];
+      case 'volley': return ar ? s.tiles.filter((t) => !validate(s, { type: 'spell', p: f, army: ar.id, target: t.id })).map((t) => t.id) : [];
+      case 'wall': return s.tiles.filter((t) => !validate(s, { type: 'spell', p: f, army: -1, target: t.id })).map((t) => t.id);
+      case 'treant': return s.tiles.filter((t) => this.selCity !== null && !validate(s, { type: 'recruit', p: f, city: this.selCity, unit: 'treant', at: t.id })).map((t) => t.id);
+      default: return [];
+    }
+  }
+
   private onTileClick(id: number) {
     if (!this.controlsCurrent() || this.busy) {
       if (id >= 0) this.showTooltip(id, 0, 0, true);
@@ -389,6 +442,21 @@ export class GameController {
     const s = this.state;
     const f = currentPlayer(s).faction;
     const sel = this.selArmy !== null ? armyById(s, this.selArmy) : undefined;
+    if (this.mode) {
+      const mode = this.mode;
+      const targets = this.modeTargets();
+      this.mode = null;
+      if (targets.includes(id)) {
+        if (mode === 'terraform' && sel) this.submit({ type: 'terraform', p: f, army: sel.id, target: id });
+        if (mode === 'volley' && sel) this.submit({ type: 'spell', p: f, army: sel.id, target: id });
+        if (mode === 'wall') this.submit({ type: 'spell', p: f, army: -1, target: id });
+        if (mode === 'treant' && this.selCity !== null) this.submit({ type: 'recruit', p: f, city: this.selCity, unit: 'treant', at: id });
+      } else { sfx.error(); }
+      this.refresh();
+      return;
+    }
+    const fo = fortressAt(s, id);
+    if (fo?.discovered) { this.selArmy = null; this.selCity = null; this.selTile = null; this.selFort = id; sfx.select(); this.refresh(); return; }
 
     if (sel) {
       // Attack an adjacent enemy.
@@ -415,7 +483,7 @@ export class GameController {
       return;
     }
     if (city && city.owner === f) { this.selectCity(id); return; }
-    if (!sel && s.tiles[id].owner === f) { this.selArmy = null; this.selCity = null; this.selTile = id; sfx.select(); this.refresh(); return; }
+    if (!sel && s.tiles[id].owner === f) { this.selArmy = null; this.selCity = null; this.selFort = null; this.selTile = id; sfx.select(); this.refresh(); return; }
     if (sel) {
       const blocked = armiesAt(s, id).some((a) => a.owner !== f);
       this.toast(blocked ? (sel.attacked ? 'This army already attacked this turn.' : sel.mp < 1 ? 'No movement left to attack.' : 'Too far away to attack.') : sel.mp <= 0 ? 'This army has no movement left.' : 'Not enough movement to get there.', 'warn');
@@ -429,6 +497,8 @@ export class GameController {
     this.selArmy = id;
     this.selCity = null;
     this.selTile = null;
+    this.selFort = null;
+    this.mode = null;
     this.splitPick = null;
     if (id !== null) sfx.select();
     fx.clearAim(this.board);
@@ -439,6 +509,8 @@ export class GameController {
     this.selArmy = null;
     this.selCity = tile;
     this.selTile = null;
+    this.selFort = null;
+    this.mode = null;
     this.splitPick = null;
     sfx.select();
     fx.clearAim(this.board);
@@ -449,6 +521,8 @@ export class GameController {
     this.selArmy = null;
     this.selCity = null;
     this.selTile = null;
+    this.selFort = null;
+    this.mode = null;
     this.splitPick = null;
     fx.clearAim(this.board);
     this.hideTooltip();
@@ -513,6 +587,7 @@ export class GameController {
           <span class="res-item res-gold" title="Gold">${ICONS.gold}<b></b><small></small></span>
           <span class="res-item res-cities" title="Cities">${ICONS.home}<b></b></span>
           <span class="res-item res-units" title="Units">${ICONS.troops}<b></b></span>
+          <span class="res-item res-spell">${ICONS.bolt}<b></b></span>
         </div>
         <div class="top-btns">
           <button class="icon-btn btn-sound" aria-label="Toggle sound"></button>
@@ -587,7 +662,25 @@ export class GameController {
         if (other) this.selectArmy(other.id);
         break;
       }
-      case 'recruit': if (this.selCity !== null) this.submit({ type: 'recruit', p: f, city: this.selCity, unit: b.dataset.unit as UnitType }); break;
+      case 'recruit': {
+        if (this.selCity === null) break;
+        if (b.dataset.unit === 'treant') { this.mode = 'treant'; this.refresh(); this.toast('Pick an enchanted forest for the Treant. That forest becomes plains.', 'info'); break; }
+        this.submit({ type: 'recruit', p: f, city: this.selCity, unit: b.dataset.unit as UnitType });
+        break;
+      }
+      case 'terraform': this.mode = this.mode === 'terraform' ? null : 'terraform'; this.refresh(); break;
+      case 'spell': {
+        if (f === 'necro' && ar) this.submit({ type: 'spell', p: f, army: ar.id });
+        else { this.mode = f === 'elves' ? 'volley' : 'wall'; this.refresh(); }
+        break;
+      }
+      case 'mode-cancel': this.mode = null; this.refresh(); break;
+      case 'hire': {
+        if (this.selFort === null) break;
+        const army = ownArmies(this.state, f).find((x) => neighbors(this.state)[this.selFort!].includes(x.tile))?.id;
+        if (army !== undefined) this.submit({ type: 'hire', p: f, fortress: this.selFort, unit: b.dataset.unit as UnitType, army });
+        break;
+      }
       case 'upgrade': if (this.selCity !== null) this.submit({ type: 'upgrade', p: f, city: this.selCity }); break;
       case 'select-recruits': {
         if (this.selCity === null) break;
@@ -625,6 +718,10 @@ export class GameController {
     this.q('.res-gold').title = `Gold. Next turn +${inc.gold}${inc.upkeep ? `, upkeep −${inc.upkeep}` : ''}.`;
     this.q('.res-cities b').textContent = String(ownCities(s, shown.faction).length);
     this.q('.res-units b').textContent = String(unitCount(s, shown.faction));
+    const sp = this.q('.res-spell');
+    sp.querySelector('b')!.textContent = shown.spell ? String(shown.spell) : 'Ready';
+    sp.classList.toggle('hot', !shown.spell);
+    sp.title = `${SPELLS[shown.faction].name}: ${SPELLS[shown.faction].text} ${shown.spell ? `Ready in ${shown.spell} turn${shown.spell > 1 ? 's' : ''}.` : 'Ready! Use it from an army panel.'}`;
     this.q('.res-cities').classList.toggle('hot', shown.noCity > 0);
 
     this.renderPlayers();
@@ -669,18 +766,34 @@ export class GameController {
     const p = currentPlayer(s);
     const f = p.faction;
     const ar = this.selArmy !== null ? armyById(s, this.selArmy) : undefined;
-    if (!mine || (!ar && this.selCity === null && this.selTile === null)) { box.classList.add('hidden'); box.innerHTML = ''; return; }
+    if (!mine || (!ar && this.selCity === null && this.selTile === null && this.selFort === null)) { box.classList.add('hidden'); box.innerHTML = ''; return; }
     box.classList.remove('hidden');
     const btn = (cmd: string, label: string, opts: { disabled?: string | null; cls?: string; ico?: string } = {}) =>
       `<button class="btn small ${opts.cls ?? ''}" data-cmd="${cmd}" ${opts.disabled ? `disabled title="${esc(opts.disabled)}"` : ''}>${opts.ico ?? ''}${label}</button>`;
     const improveBtn = (tile: number) => {
       const t = s.tiles[tile];
-      if (cityAt(s, tile) || t.owner !== f) return '';
+      if (cityAt(s, tile) || t.owner !== f || f === 'elves') return '';
       if (t.improved >= MAX_IMPROVE) return `<span class="cmd-note">Fully improved (+${t.improved} gold)</span>`;
       const err = validate(s, { type: 'improve', p: f, tile });
       return btn('improve', `Improve +1 gold · ${IMPROVE_COST[t.improved]}`, { ico: ICONS.gold, disabled: err });
     };
     const close = `<button class="icon-btn small cmd-close" data-cmd="close" aria-label="Close">${ICONS.close}</button>`;
+    if (this.mode) {
+      const what = { terraform: f === 'necro' ? 'Pick a forest to blight.' : 'Pick a forest to clear into plains.', volley: 'Pick an enemy army next to the archers.', wall: 'Pick an empty hex next to one of your armies.', treant: 'Pick one of your enchanted forests.' }[this.mode];
+      box.innerHTML = `<div class="cmd-head"><b>${this.mode === 'treant' ? 'Awaken a Treant' : this.mode === 'terraform' ? (f === 'necro' ? 'Blight forest' : 'Clear forest') : SPELLS[f].name}</b><span>${what}</span>${close}</div>
+        <div class="cmd-actions">${btn('mode-cancel', 'Cancel', { cls: 'ghost' })}</div>`;
+      return;
+    }
+    if (this.selFort !== null) {
+      const fo = this.selFort;
+      const next = ownArmies(s, f).find((x) => neighbors(s)[fo].includes(x.tile));
+      box.innerHTML = `<div class="cmd-head"><b>Dwarf fortress</b><span>Mercenaries join an army standing next to the fortress.${next ? '' : ' <em class="warn">Move an army next to it first.</em>'}</span>${close}</div>
+        <div class="recruits">${DWARF_UNITS.map((u) => {
+          const st = UNIT_STATS[u];
+          return `<button class="rcard" data-cmd="hire" data-unit="${u}" ${!next || p.gold < unitCost(u) ? 'disabled' : ''} title="${esc(st.ability ?? '')}">${unitSvg(u)}<b>${st.name}</b><span class="rstats">+2/+2 vs ${FACTIONS[st.counters!].short}</span><span class="card-cost">${ICONS.gold}${unitCost(u)}</span></button>`;
+        }).join('')}</div>`;
+      return;
+    }
 
     if (ar) {
       const here = this.myArmiesAt(ar.tile);
@@ -708,6 +821,8 @@ export class GameController {
              ${btn('build', `Build city · ${CITY_COST(f)}`, { ico: ICONS.home, disabled: buildErr })}
              ${improveBtn(ar.tile)}
              ${enchantErr !== 'skip' ? btn('enchant', 'Enchant forest', { ico: ICONS.bolt, disabled: enchantErr }) : ''}
+             ${(f === 'necro' || ar.units.some((u) => u.type === 'mammoth')) ? btn('terraform', f === 'necro' ? 'Blight forest' : 'Clear forest', { ico: f === 'necro' ? ICONS.skull : ICONS.march, disabled: terraformTargets(s, ar).length ? null : ar.attacked ? 'Uses the attack for this turn.' : 'No healthy forest here or next to the army.' }) : ''}
+             ${btn('spell', `${SPELLS[f].name}${p.spell ? ` (${p.spell})` : ''}`, { cls: p.spell ? '' : 'spell', ico: ICONS.bolt, disabled: p.spell ? `Recharges in ${p.spell} turn${p.spell > 1 ? 's' : ''}.` : f === 'necro' ? validate(s, { type: 'spell', p: f, army: ar.id }) : f === 'elves' && !ar.units.some((u) => u.type === 'archer') ? 'Needs archers in this army.' : null })}
              <span class="cmd-note">${TERRAIN_INFO[t.terrain].name}: defence +${def.total}${def.labels.length ? ` (${def.labels.join(', ')})` : ''}</span>`}
         </div>`;
       return;
@@ -732,13 +847,14 @@ export class GameController {
       <div class="recruits">${FACTION_UNITS[f].map((u) => {
         const st = UNIT_STATS[u];
         const cost = unitCost(u);
-        return `<button class="rcard" data-cmd="recruit" data-unit="${u}" ${p.gold < cost ? 'disabled' : ''} title="${st.ability ? esc(st.ability) : ''}">
+        const capped = st.tier === 3 && tier3Count(s, f) >= tier3Limit(s, f);
+        return `<button class="rcard" data-cmd="recruit" data-unit="${u}" ${p.gold < cost || capped ? 'disabled' : ''} title="${capped ? 'Tier-3 limit reached.' : st.ability ? esc(st.ability) : ''}">
           ${unitSvg(u)}<b>${st.name}</b><span class="rstats">ATK +${st.attack} · DEF +${st.defense} · HP ${st.hp}</span><span class="card-cost">${ICONS.gold}${cost}</span></button>`;
       }).join('')}</div>
       <div class="cmd-actions">
         ${btn('upgrade', `Upgrade · ${UPGRADE_COST(f)}`, { ico: ICONS.shield, disabled: c.level >= MAX_CITY_LEVEL ? 'Fully upgraded.' : upErr })}
         ${garrison ? btn('select-recruits', `Garrison (${garrison.units.length})`, { cls: 'go', ico: ICONS.troops }) : ''}
-        <span class="cmd-note">Recruits join the garrison inside the city.${garrison && garrison.units.length >= ARMY_FREE_SIZE ? ` Above ${ARMY_FREE_SIZE} units an army costs upkeep.` : ''}</span>
+        <span class="cmd-note">Tier 3: ${tier3Count(s, f)}/${tier3Limit(s, f)} (2 + 1 per city). ${f === 'elves' ? 'Treants awaken in an enchanted forest. ' : ''}Recruits join the garrison.${garrison && garrison.units.length >= ARMY_FREE_SIZE ? ` Above ${ARMY_FREE_SIZE} units an army costs upkeep.` : ''}</span>
       </div>`;
   }
 
@@ -748,17 +864,17 @@ export class GameController {
     const u = ar?.units.find((x) => x.id === unitId);
     if (!ar || !u) return;
     const st = UNIT_STATS[u.type];
-    const fac = st.faction === 'neutral' ? null : FACTIONS[st.faction];
+    const fac = st.faction === 'neutral' || st.faction === 'dwarves' ? null : FACTIONS[st.faction];
     const mine = this.controlsCurrent() && ar.owner === currentPlayer(this.state).faction;
     const card = this.openModal(`
       <div class="unit-hero ${u.hp < st.hp ? 'hurt' : ''}">${unitSvg(u.type, 'idle')}</div>
       <h2>${st.name}</h2>
-      <p class="sub">${fac ? fac.short : 'Wildlands'} · tier ${st.tier}</p>
+      <p class="sub">${fac ? fac.short : st.faction === 'dwarves' ? 'Dwarf mercenary' : 'Wildlands'} · tier ${st.tier}${st.counters ? ` · counters ${FACTIONS[st.counters].short}` : ''}</p>
       <dl class="unit-stats">
         <div><dt>Attack</dt><dd>+${st.attack}</dd></div>
         <div><dt>Defence</dt><dd>+${st.defense}</dd></div>
         <div><dt>HP</dt><dd class="${u.hp < st.hp ? 'bad' : ''}">${u.hp}/${st.hp}</dd></div>
-        <div><dt>Cost</dt><dd>${st.faction === 'neutral' ? '–' : unitCost(u.type)}</dd></div>
+        <div><dt>Cost</dt><dd>${unitCost(u.type) || '–'}</dd></div>
       </dl>
       ${st.ability ? `<p class="unit-ability">${esc(st.ability)}</p>` : ''}
       <p class="unit-note">Rolls 1 die in every fight round and adds its ${'attack or defence'}. Killing it gives ${bounty(u.type)} gold.${u.hp < st.hp ? ' Wounded: heals 1 HP per turn next to an own city.' : ''}</p>
@@ -797,6 +913,8 @@ export class GameController {
   private applyMarks() {
     const s = this.state;
     if (!this.controlsCurrent() || this.busy) { this.board.mark({}); return; }
+    if (this.mode) { this.board.mark({ selected: this.selArmy !== null ? armyById(s, this.selArmy)?.tile ?? null : this.selCity, targets: this.modeTargets(), dimOthers: true }); return; }
+    if (this.selFort !== null) { this.board.mark({ selected: this.selFort }); return; }
     const f = currentPlayer(s).faction;
     const ar = this.selArmy !== null ? armyById(s, this.selArmy) : undefined;
     if (ar) {
@@ -823,6 +941,11 @@ export class GameController {
     const head = owner ?? 'neutral';
     const rows: string[] = [];
     rows.push(`<div class="tip-row"><b>${TERRAIN_INFO[t.terrain].name}</b> ${TERRAIN_INFO[t.terrain].text}${t.improved ? ` <span class="tip-feat">Improved ${t.improved}/${MAX_IMPROVE}: +${t.improved} gold.</span>` : ''}${t.enchanted ? ' <span class="tip-feat">Enchanted: elves +1 defence.</span>' : ''}</div>`);
+    const fo = fortressAt(s, id);
+    if (fo?.discovered) rows.push(`<div class="tip-row tip-feat">Dwarf fortress: hire mercenaries with an army next to it.</div>`);
+    const wl = wallAt(s, id);
+    if (wl) rows.push(`<div class="tip-row tip-feat">Stone Wall (${wl.hp} HP): only Giants pass. Defence +4, never strikes back.</div>`);
+    if (t.corrupted) rows.push(`<div class="tip-row tip-feat">Blighted forest: move cost 1, no elven bonus.</div>`);
     if (city) rows.push(`<div class="tip-row tip-feat">${city.capital ? 'Capital' : 'City'} of ${FACTIONS[city.owner].short}${city.level ? `, level ${city.level}` : ''}. Siege: ${SIEGE_ROUNDS + city.level} rounds.</div>`);
     if (build) rows.push(`<div class="tip-row tip-feat">${build.kind === 'city' ? 'City' : 'Upgrade'} ready in ${plural(build.turnsLeft, 'turn')}.</div>`);
     for (const a of armies) {

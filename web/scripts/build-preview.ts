@@ -11,6 +11,7 @@ const GROUPS: [string, string, string][] = [
   ['necro', 'Death Cults', '#8e4fc4'],
   ['elves', 'Evergarden', '#f0b928'],
   ['giants', 'Giants', '#e0452f'],
+  ['dwarves', 'Dwarf mercenaries', '#3e6fb3'],
   ['neutral', 'Wildlands', '#b9a88f'],
 ];
 
@@ -58,7 +59,7 @@ dt{font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:#ffd9a0}dd
 ${css}
 </style></head><body>
 <h1>Units of Juräa</h1>
-<p class="lead">Nine faction units and the neutral Wildling. Click a figure or the buttons to see attack, hit and death.</p>
+<p class="lead">Faction units, spell creations, dwarf mercenaries and the neutral Wildling. Click a figure or the buttons to see attack, hit and death.</p>
 <div class="top"><button id="all-attack">Everyone attacks</button><button id="all-hit">Everyone is hit</button><button id="reset">Reset all</button></div>
 ${GROUPS.map(([f, name, c]) => `<section class="group"><h2><i style="--c:${c}"></i>${name}</h2><div class="row">${UNIT_ORDER.filter((id) => UNITS[id].faction === f).map(card).join('')}</div></section>`).join('')}
 <section class="minis"><h2>Size on a map hex</h2><p>About 40 pixels, like the figures on the map.</p><div class="mini-row">${UNIT_ORDER.map((id) => unitSvg(id, 'idle')).join('')}</div></section>

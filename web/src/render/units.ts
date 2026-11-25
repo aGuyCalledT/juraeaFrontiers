@@ -16,7 +16,7 @@ export type AttackStyle = 'swing' | 'cast' | 'shoot' | 'cannon' | 'stomp';
 export interface UnitSprite {
   id: UnitId;
   name: string;
-  faction: 'necro' | 'elves' | 'giants' | 'neutral';
+  faction: 'necro' | 'elves' | 'giants' | 'neutral' | 'dwarves';
   tier: 1 | 2 | 3;
   attack: number;
   defense: number;
@@ -375,6 +375,109 @@ const mammoth = `
   </g>
 </g>`;
 
+
+// ---------------------------------------------------------------- Bone Colossus
+const colossus = `
+${shadow(30)}
+<g class="u-rig">
+  ${bone('M48 84 L42 98 L40 108', 8)}${bone('M72 84 L78 98 L80 108', 8)}
+  <path d="M30 110 L50 108 M70 108 L90 110" ${o(7)}/>
+  <path d="M42 82 Q60 72 78 82 L76 90 Q60 84 44 90 Z" fill="currentColor" ${o()}/>
+  ${bone('M60 82 L60 58', 7)}
+  <path d="M36 44 Q60 34 84 44 Q86 66 60 74 Q34 66 36 44 Z" fill="${BONE}" ${o()}/>
+  <path d="M42 50 Q60 44 78 50 M41 57 Q60 51 79 57 M44 64 Q60 58 76 64" fill="none" stroke="${K}" stroke-width="3" stroke-linecap="round"/>
+  <path d="M60 40 L60 72" stroke="${BONE_SHADE}" stroke-width="4"/>
+  ${bone('M38 46 L24 62 L20 80', 7)}
+  <circle cx="19" cy="84" r="7" fill="${BONE}" ${o(3)}/>
+  <g class="u-weapon" style="transform-origin: 86px 60px">
+    ${bone('M82 46 L92 58 L94 66', 7)}
+    <path d="M94 70 L108 14" stroke="${K}" stroke-width="12" stroke-linecap="round"/>
+    <path d="M94 70 L108 14" stroke="${BONE}" stroke-width="7" stroke-linecap="round"/>
+    <circle cx="109" cy="12" r="9" fill="${BONE}" ${o(3)}/>
+    <circle cx="101" cy="22" r="6" fill="${BONE}" ${o(3)}/>
+    <circle cx="94" cy="68" r="7" fill="${BONE}" ${o(3)}/>
+  </g>
+  <g class="u-head">
+    <path d="M42 26 Q42 4 60 4 Q78 4 78 26 Q78 34 72 37 L72 42 L48 42 L48 37 Q42 34 42 26 Z" fill="${BONE}" ${o()}/>
+    <ellipse cx="53" cy="24" rx="5.5" ry="6.5" fill="${K}"/><ellipse cx="67" cy="24" rx="5.5" ry="6.5" fill="${K}"/>
+    <circle cx="53" cy="24" r="2.6" fill="${GLOW}"/><circle cx="67" cy="24" r="2.6" fill="${GLOW}"/>
+    <path d="M58 32 L60 29 L62 32 Z" fill="${K}"/>
+    <path d="M50 38 L50 42 M55 38 L55 42 M60 38 L60 42 M65 38 L65 42 M70 38 L70 42" stroke="${K}" stroke-width="2"/>
+    <path d="M44 14 L36 4 L46 9 Z M76 14 L84 4 L74 9 Z" fill="${BONE}" ${o(2.5)}/>
+  </g>
+</g>`;
+
+// ---------------------------------------------------------------- Dwarves
+const DSKIN = '#f2b98d';
+const dwarfBody = (beard: string, tunic: string, extra = '') => `
+  <path d="M48 92 L46 108 M72 92 L74 108" stroke="${K}" stroke-width="12" stroke-linecap="round"/>
+  <path d="M48 92 L46 108 M72 92 L74 108" stroke="#5a3a1c" stroke-width="7" stroke-linecap="round"/>
+  <path d="M38 110 Q38 104 46 104 Q54 104 54 110 Z M66 110 Q66 104 74 104 Q82 104 82 110 Z" fill="#3b2617" ${o(3)}/>
+  <path d="M34 64 Q32 96 60 96 Q88 96 86 64 Q60 54 34 64 Z" fill="${tunic}" ${o()}/>
+  <path d="M34 84 L86 84" stroke="#6b3f1f" stroke-width="6"/>
+  <rect x="55" y="80" width="10" height="8" rx="1.5" fill="#ffd23f" ${o(2)}/>
+  ${extra}
+  <circle cx="60" cy="48" r="14" fill="${DSKIN}" ${o()}/>
+  <path d="M44 50 Q42 80 60 84 Q78 80 76 50 Q70 58 60 58 Q50 58 44 50 Z" fill="${beard}" ${o(3)}/>
+  <path d="M52 66 Q60 70 68 66 M50 74 Q60 78 70 74" stroke="${K}" stroke-width="1.5" fill="none" opacity=".35"/>
+  <circle cx="55" cy="47" r="2" fill="${K}"/><circle cx="65" cy="47" r="2" fill="${K}"/>
+  <ellipse cx="60" cy="53" rx="4" ry="3" fill="#e08f6a" ${o(1.5)}/>`;
+
+const runepriest = `
+${shadow(20)}
+<g class="u-rig">
+  ${dwarfBody('#f1efe6', '#3e6fb3', `<path d="M42 66 L52 92 M78 66 L68 92" stroke="#ffd23f" stroke-width="3"/>`)}
+  <g class="u-head"><path d="M44 42 Q44 26 60 24 Q76 26 76 42 Z" fill="#3e6fb3" ${o(3)}/><path d="M46 40 L74 40" stroke="#ffd23f" stroke-width="3"/><circle cx="60" cy="30" r="3.5" fill="#7ff0ff" ${o(1.5)}/></g>
+  <path d="M36 66 Q26 74 28 86" fill="none" stroke="${K}" stroke-width="11" stroke-linecap="round"/><path d="M36 66 Q26 74 28 86" fill="none" stroke="#3e6fb3" stroke-width="6" stroke-linecap="round"/>
+  <g class="u-weapon" style="transform-origin: 86px 76px">
+    <path d="M84 66 Q92 70 90 78" fill="none" stroke="${K}" stroke-width="11" stroke-linecap="round"/><path d="M84 66 Q92 70 90 78" fill="none" stroke="#3e6fb3" stroke-width="6" stroke-linecap="round"/>
+    <path d="M92 108 L92 30" stroke="${K}" stroke-width="8" stroke-linecap="round"/><path d="M92 108 L92 30" stroke="#8a5a2b" stroke-width="4" stroke-linecap="round"/>
+    <rect x="80" y="14" width="24" height="20" rx="4" fill="#9ba3ab" ${o(3)}/>
+    <path d="M86 20 L92 28 L98 20 M92 18 L92 30" stroke="#7ff0ff" stroke-width="2.6" fill="none" stroke-linecap="round"/>
+    <circle cx="90" cy="78" r="5" fill="${DSKIN}" ${o(2.5)}/>
+    <g class="u-fx"><circle cx="92" cy="24" r="18" fill="#7ff0ff" opacity=".45"/><path d="M92 2 L96 16 L110 14 L98 22 L106 34 L92 26 L78 34 L86 22 L74 14 L88 16 Z" fill="#c8faff" ${o(2)}/></g>
+  </g>
+</g>`;
+
+const woodcutter = `
+${shadow(20)}
+<g class="u-rig">
+  ${dwarfBody('#c4652a', '#3f8a4a', `<path d="M36 70 L84 70" stroke="#c94f3a" stroke-width="5"/><path d="M36 76 L84 76" stroke="#c94f3a" stroke-width="5" opacity=".6"/>`)}
+  <g class="u-head"><path d="M44 44 Q42 28 60 26 Q78 28 76 44 Q70 38 60 38 Q50 38 44 44 Z" fill="#c94f3a" ${o(3)}/><circle cx="60" cy="24" r="4" fill="#fff" ${o(2)}/></g>
+  <path d="M36 66 Q26 74 28 86" fill="none" stroke="${K}" stroke-width="11" stroke-linecap="round"/><path d="M36 66 Q26 74 28 86" fill="none" stroke="#3f8a4a" stroke-width="6" stroke-linecap="round"/>
+  <g class="u-weapon" style="transform-origin: 84px 74px">
+    <path d="M84 66 Q92 70 88 76" fill="none" stroke="${K}" stroke-width="11" stroke-linecap="round"/><path d="M84 66 Q92 70 88 76" fill="none" stroke="#3f8a4a" stroke-width="6" stroke-linecap="round"/>
+    <path d="M86 78 L104 26" stroke="${K}" stroke-width="8" stroke-linecap="round"/><path d="M86 78 L104 26" stroke="#8a5a2b" stroke-width="4" stroke-linecap="round"/>
+    <path d="M98 30 Q90 18 100 10 L114 22 Q110 34 98 30 Z" fill="#c9cdd2" ${o(3)}/>
+    <path d="M102 14 L112 24" stroke="#fff" stroke-width="2.5" stroke-linecap="round"/>
+    <circle cx="88" cy="76" r="5" fill="${DSKIN}" ${o(2.5)}/>
+  </g>
+</g>`;
+
+const slayer = `
+${shadow(20)}
+<g class="u-rig">
+  ${dwarfBody('#e07a2a', DSKIN, `<path d="M40 70 Q60 64 80 70" stroke="#6b3f1f" stroke-width="4" fill="none"/><path d="M44 74 L50 66 M76 74 L70 66" stroke="#3a7fd0" stroke-width="3"/>`)}
+  <g class="u-head"><path d="M56 34 L54 10 L60 18 L62 6 L66 18 L70 12 L66 34 Z" fill="#ff7a2e" ${o(2.5)}/></g>
+  <path d="M36 66 Q24 72 26 86" fill="none" stroke="${K}" stroke-width="12" stroke-linecap="round"/><path d="M36 66 Q24 72 26 86" fill="none" stroke="${DSKIN}" stroke-width="7" stroke-linecap="round"/>
+  <g class="u-weapon" style="transform-origin: 84px 74px">
+    <path d="M84 66 Q94 70 90 78" fill="none" stroke="${K}" stroke-width="12" stroke-linecap="round"/><path d="M84 66 Q94 70 90 78" fill="none" stroke="${DSKIN}" stroke-width="7" stroke-linecap="round"/>
+    <path d="M90 80 L100 16" stroke="${K}" stroke-width="8" stroke-linecap="round"/><path d="M90 80 L100 16" stroke="#6b3f1f" stroke-width="4" stroke-linecap="round"/>
+    <path d="M100 20 Q84 14 82 30 Q92 32 99 28 Z M100 20 Q116 14 118 30 Q108 32 101 28 Z" fill="#c9cdd2" ${o(3)}/>
+    <circle cx="90" cy="78" r="5" fill="${DSKIN}" ${o(2.5)}/>
+  </g>
+</g>`;
+
+const wall = `
+${shadow(34)}
+<g class="u-rig">
+  <path d="M14 108 L14 52 L26 52 L26 60 L38 60 L38 52 L50 52 L50 60 L62 60 L62 52 L74 52 L74 60 L86 60 L86 52 L98 52 L98 60 L106 60 L106 108 Z" fill="#b3a998" ${o()}/>
+  <path d="M14 72 L106 72 M14 90 L106 90 M34 60 L34 72 M60 72 L60 90 M84 60 L84 72 M40 90 L40 108 M80 90 L80 108" stroke="#7d7466" stroke-width="3.5"/>
+  <path d="M86 52 L98 52 L98 108 L106 108 L106 60 Z" fill="#8f8577" opacity=".6"/>
+  <path d="M20 66 Q26 62 30 66" stroke="#ddd5c6" stroke-width="3" fill="none" stroke-linecap="round"/>
+  <path d="M46 34 L46 52" stroke="${K}" stroke-width="5" stroke-linecap="round"/><path d="M47 34 L66 40 L47 46 Z" fill="currentColor" ${o(3)}/>
+</g>`;
+
 // ---------------------------------------------------------------- Neutral
 const wildling = `
 ${shadow(20)}
@@ -407,15 +510,16 @@ ${shadow(20)}
   </g>
 </g>`;
 
-const ART: Record<UnitId, string> = { skeleton, lich, priest, archer, druid, treant, irongut, belcher, mammoth, wildling };
+const ART: Record<UnitId, string> = { skeleton, lich, priest, colossus, archer, druid, treant, irongut, belcher, mammoth, runepriest, woodcutter, slayer, wildling, wall };
 const STYLE: Record<UnitId, AttackStyle> = {
-  skeleton: 'swing', lich: 'cast', priest: 'cast', archer: 'shoot', druid: 'cast', treant: 'swing',
-  irongut: 'swing', belcher: 'cannon', mammoth: 'stomp', wildling: 'swing',
+  skeleton: 'swing', lich: 'cast', priest: 'cast', colossus: 'swing', archer: 'shoot', druid: 'cast', treant: 'swing',
+  irongut: 'swing', belcher: 'cannon', mammoth: 'stomp', runepriest: 'cast', woodcutter: 'swing', slayer: 'swing', wildling: 'swing', wall: 'stomp',
 };
 /** Size relative to the 120px box. Giants tower over everyone, the mammoth most of all. */
 export const UNIT_SCALE: Record<UnitId, number> = {
   skeleton: 0.74, lich: 0.8, priest: 0.84, archer: 0.74, druid: 0.8, treant: 1.0,
   irongut: 1.08, belcher: 1.1, mammoth: 1.32, wildling: 0.74,
+  colossus: 1.12, runepriest: 0.66, woodcutter: 0.66, slayer: 0.66, wall: 0.95,
 };
 
 const scaled = (id: UnitId) => {
@@ -430,9 +534,9 @@ export const UNITS: Record<UnitId, UnitSprite> = Object.fromEntries(
   }),
 ) as Record<UnitId, UnitSprite>;
 
-export const UNIT_ORDER: UnitId[] = ['skeleton', 'lich', 'priest', 'archer', 'druid', 'treant', 'irongut', 'belcher', 'mammoth', 'wildling'];
+export const UNIT_ORDER: UnitId[] = ['skeleton', 'lich', 'priest', 'colossus', 'archer', 'druid', 'treant', 'irongut', 'belcher', 'mammoth', 'runepriest', 'woodcutter', 'slayer', 'wildling', 'wall'];
 
-export const TRIM: Record<UnitSprite['faction'], string> = { necro: '#8e4fc4', elves: '#f0b928', giants: '#e0452f', neutral: '#b9a88f' };
+export const TRIM: Record<UnitSprite['faction'], string> = { necro: '#8e4fc4', elves: '#f0b928', giants: '#e0452f', neutral: '#b9a88f', dwarves: '#3e6fb3' };
 
 /** Standalone <svg> for a unit. */
 export function unitSvg(id: UnitId, cls = ''): string {

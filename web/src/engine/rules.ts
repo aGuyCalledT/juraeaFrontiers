@@ -7,8 +7,8 @@ import type {
   Income, Owner, PlayerState, RaiseResult, Tile, Unit,
 } from './types';
 import {
-  ARMY_FREE_SIZE, CITY_COST, FACTION_UNITS, IMPROVE_COST, MAX_CITY_LEVEL, MAX_IMPROVE, MOVE_POINTS, NO_CITY_LIMIT,
-  SIEGE_ROUNDS, START_GOLD, UNIT_STATS, UPGRADE_COST, baseCost, bounty, refund, unitCost, type UnitType,
+  ARMY_FREE_SIZE, CITY_COST, DWARF_UNITS, FACTION_UNITS, IMPROVE_COST, MAX_CITY_LEVEL, MAX_IMPROVE, MOVE_POINTS, NO_CITY_LIMIT,
+  ENCHANTED_GOLD, SIEGE_ROUNDS, SPELL_COOLDOWN, START_GOLD, UNIT_STATS, UPGRADE_COST, WALL_HP, baseCost, bounty, refund, unitCost, type UnitType,
 } from './unitstats';
 
 // ------------------------------------------------------------------ helpers
@@ -34,16 +34,29 @@ export function landTiles(s: GameState): Tile[] { return s.tiles.filter((t) => t
 export function ownedTiles(s: GameState, f: Owner): Tile[] { return s.tiles.filter((t) => t.owner === f); }
 export function isCoastal(s: GameState, tile: number): boolean { return neighbors(s)[tile].some((n) => s.tiles[n].terrain === 'water'); }
 export function upkeepOf(a: Army): number { return Math.max(0, a.units.length - ARMY_FREE_SIZE); }
+export function wallAt(s: GameState, tile: number) { return s.walls.find((w) => w.tile === tile); }
+export function fortressAt(s: GameState, tile: number) { return s.fortresses.find((f) => f.tile === tile); }
+export function tier3Count(s: GameState, f: FactionId): number {
+  return ownArmies(s, f).reduce((n, a) => n + a.units.filter((u) => UNIT_STATS[u.type].tier === 3).length, 0);
+}
+/** Tier-3 units allowed: 2 plus one per city. */
+export function tier3Limit(s: GameState, f: FactionId): number { return 2 + ownCities(s, f).length; }
+const near = (s: GameState, a: number, b: number) => hexDistance(s.tiles[a].q, s.tiles[a].r, s.tiles[b].q, s.tiles[b].r);
+/** Elves cannot grow forest within 2 hexes of an enemy city. */
+export function canGrowForest(s: GameState, tile: number): boolean {
+  return !s.cities.some((c) => c.owner !== 'elves' && near(s, c.tile, tile) <= 2);
+}
 
 /** Cost for an army of `owner` to step onto `tile`, or Infinity if it cannot go there. */
 export function stepCost(s: GameState, owner: Owner, tile: number, movingArmy?: number): number {
   const t = s.tiles[tile];
-  if (IMPASSABLE(t)) return Infinity;
+  if (IMPASSABLE(t) || fortressAt(s, tile)) return Infinity;
+  if (wallAt(s, tile) && owner !== 'giants') return Infinity;
   const city = cityAt(s, tile);
   if (city && city.owner !== owner) return Infinity;
   const here = armiesAt(s, tile).filter((a) => a.id !== movingArmy);
   if (here.some((a) => a.owner !== owner)) return Infinity;
-  const base = TERRAIN_COST[t.terrain];
+  const base = t.corrupted ? 1 : TERRAIN_COST[t.terrain];
   return here.length ? Math.max(1, base - 1) : base;
 }
 
@@ -79,7 +92,20 @@ export function pathTo(reach: Map<number, Reach>, target: number): number[] {
 /** Enemy-held tiles this army may attack right now. */
 export function attackTargets(s: GameState, army: Army): number[] {
   if (army.mp < 1 || army.attacked || army.owner === 'neutral' || s.pendingFight) return [];
-  return neighbors(s)[army.tile].filter((n) => armiesAt(s, n).some((a) => a.owner !== army.owner));
+  return neighbors(s)[army.tile].filter((n) => armiesAt(s, n).some((a) => a.owner !== army.owner) || (army.owner !== 'giants' && !!wallAt(s, n)));
+}
+
+/** Forests this army may clear (mammoths) or blight (necromancers) instead of attacking. */
+export function terraformTargets(s: GameState, army: Army): number[] {
+  if (army.mp < 1 || army.attacked || s.pendingFight) return [];
+  const mammoth = army.owner === 'giants' && army.units.some((u) => u.type === 'mammoth');
+  const necro = army.owner === 'necro';
+  if (!mammoth && !necro) return [];
+  return [army.tile, ...neighbors(s)[army.tile]].filter((t) => {
+    const tile = s.tiles[t];
+    if (tile.terrain !== 'forest' || cityAt(s, t)) return false;
+    return mammoth || !tile.corrupted;
+  });
 }
 
 export function computeIncome(s: GameState, f: FactionId): Income {
@@ -92,7 +118,10 @@ export function computeIncome(s: GameState, f: FactionId): Income {
   const improvements = own.reduce((n, t) => n + t.improved, 0);
   const enchanted = f === 'elves' ? s.tiles.filter((t) => t.enchanted && t.owner === 'elves').length : 0;
   const upkeep = ownArmies(s, f).reduce((n, a) => n + upkeepOf(a), 0);
-  const gold = plains + mountains + Math.floor(forests / 2) + (cs.length - coastal) * 3 + coastal * 4 + improvements + Math.floor(enchanted / 3);
+  const cityGold = (cs.length - coastal) * 3 + coastal * 4;
+  // Evergarden lives from its cities and enchanted forests only.
+  if (f === 'elves') return { gold: cityGold + enchanted * ENCHANTED_GOLD, plains: 0, mountains: 0, forests: 0, cities: cs.length, coastal, improvements: 0, enchanted, upkeep };
+  const gold = plains + mountains + Math.floor(forests / 2) + cityGold + improvements;
   return { gold, plains, mountains, forests, cities: cs.length, coastal, improvements, enchanted, upkeep };
 }
 
@@ -103,8 +132,8 @@ export function defenseBonus(s: GameState, tile: Tile, owner: Owner): { total: n
   if (tile.terrain === 'mountain') { total += 1; labels.push('Mountain +1'); }
   const city = cityAt(s, tile.id);
   if (city && city.owner === owner) { total += 1; labels.push('City +1'); }
-  if (owner === 'elves' && tile.terrain === 'forest') { total += 1; labels.push('Forest Wardens +1'); }
-  if (owner === 'elves' && tile.enchanted) { total += 1; labels.push('Enchanted +1'); }
+  if (owner === 'elves' && tile.terrain === 'forest' && !tile.corrupted) { total += 1; labels.push('Forest Wardens +1'); }
+  if (owner === 'elves' && tile.enchanted && !tile.corrupted) { total += 1; labels.push('Enchanted +1'); }
   return { total, labels };
 }
 
@@ -119,13 +148,14 @@ export function createGame(setup: GameSetup): { state: GameState; events: GameEv
   const order = new Rng(setup.seed ^ 0x0de5).shuffle(setup.slots.filter((s) => s.kind !== 'off'));
   const players: PlayerState[] = order.map((s) => ({
     faction: s.faction, kind: s.kind === 'ai' ? 'ai' : 'human', controller: s.controller, name: s.name,
-    alive: true, gold: START_GOLD, noCity: 0, kills: 0,
+    alive: true, gold: START_GOLD, noCity: 0, kills: 0, spell: SPELL_COOLDOWN,
   }));
   const state: GameState = {
-    version: 3, setup, rng: setup.seed, radius: map.radius, tiles: map.tiles, regions: map.regions, armies: map.armies,
+    version: 4, setup, rng: setup.seed, radius: map.radius, tiles: map.tiles, regions: map.regions, armies: map.armies,
     cities: map.cities, builds: [], players, current: 0, phase: 'play', turn: 1, nextId: map.nextId, winner: null,
-    actionCount: 0, pendingFight: null,
+    actionCount: 0, pendingFight: null, fortresses: map.fortresses, walls: [],
   };
+  for (const a of state.armies) if (a.owner !== 'neutral') discover(state, a.tile, a.owner, []);
   const events: GameEvent[] = [];
   const rng = new Rng(state.rng);
   startTurn(state, rng, events, true);
@@ -169,7 +199,7 @@ export function validate(s: GameState, a: Action): string | null {
       if (ar.attacked) return 'This army already attacked this turn.';
       if (ar.mp < 1) return 'Attacking needs 1 movement point.';
       if (!neighbors(s)[ar.tile].includes(a.target)) return 'Target must be next to the army.';
-      if (!armiesAt(s, a.target).some((x) => x.owner !== f)) return 'Nobody to attack there.';
+      if (!armiesAt(s, a.target).some((x) => x.owner !== f) && !(f !== 'giants' && wallAt(s, a.target))) return 'Nobody to attack there.';
       return null;
     }
     case 'fight':
@@ -196,7 +226,51 @@ export function validate(s: GameState, a: Action): string | null {
       if (!c || c.owner !== f) return 'Recruit in one of your cities.';
       if (!FACTION_UNITS[f].includes(a.unit)) return 'Your faction cannot recruit that.';
       if (p.gold < unitCost(a.unit)) return 'Not enough gold.';
+      if (UNIT_STATS[a.unit].tier === 3 && tier3Count(s, f) >= tier3Limit(s, f)) return `Tier-3 limit reached (${tier3Limit(s, f)}: 2 + 1 per city).`;
+      if (a.unit === 'treant') {
+        if (a.at === undefined) return 'Treants awaken in an enchanted forest. Pick one.';
+        const t = s.tiles[a.at];
+        if (!t || t.owner !== 'elves' || !t.enchanted || t.corrupted || t.terrain !== 'forest') return 'Treants awaken only in your enchanted forests.';
+        if (armiesAt(s, a.at).some((x) => x.owner !== f)) return 'Enemies stand in that forest.';
+        if (armiesAt(s, a.at).length >= 2) return 'Two armies already stand there.';
+        return null;
+      }
       if (armiesAt(s, a.city).some((x) => x.owner !== f)) return 'The city is occupied.';
+      return null;
+    }
+    case 'hire': {
+      const fo = fortressAt(s, a.fortress);
+      if (!fo || !fo.discovered) return 'No dwarf fortress there.';
+      if (!DWARF_UNITS.includes(a.unit)) return 'The dwarves do not offer that.';
+      const ar = myArmy(a.army);
+      if (!ar || !neighbors(s)[a.fortress].includes(ar.tile)) return 'An army must stand next to the fortress.';
+      if (p.gold < unitCost(a.unit)) return 'Not enough gold.';
+      return null;
+    }
+    case 'terraform': {
+      const ar = myArmy(a.army);
+      if (!ar) return 'Pick one of your armies.';
+      if (ar.attacked) return 'This army already attacked this turn.';
+      if (ar.mp < 1) return 'Needs 1 movement point.';
+      return terraformTargets(s, ar).includes(a.target) ? null : f === 'necro' ? 'Pick a healthy forest here or next to the army.' : 'Needs a mammoth and a forest here or next to the army.';
+    }
+    case 'spell': {
+      if (p.spell > 0) return `The spell recharges in ${p.spell} turn${p.spell > 1 ? 's' : ''}.`;
+      const ar = myArmy(a.army);
+      if (f === 'necro') {
+        if (!ar || ar.units.filter((u) => u.type === 'skeleton').length < 3) return 'Needs an army with 3 skeletons.';
+        if (tier3Count(s, f) >= tier3Limit(s, f)) return `Tier-3 limit reached (${tier3Limit(s, f)}).`;
+        return null;
+      }
+      if (f === 'elves') {
+        if (!ar || !ar.units.some((u) => u.type === 'archer')) return 'Needs an army with archers.';
+        if (a.target === undefined || !neighbors(s)[ar.tile].includes(a.target) || !armiesAt(s, a.target).some((x) => x.owner !== f)) return 'Pick an enemy army next to the archers.';
+        return null;
+      }
+      if (a.target === undefined) return 'Pick an empty hex next to a Giant army.';
+      const t = s.tiles[a.target];
+      if (!t || IMPASSABLE(t) || cityAt(s, t.id) || fortressAt(s, t.id) || wallAt(s, t.id) || armiesAt(s, t.id).length) return 'Walls need an empty hex.';
+      if (!ownArmies(s, f).some((x) => neighbors(s)[x.tile].includes(t.id))) return 'Walls rise next to one of your armies.';
       return null;
     }
     case 'build': {
@@ -220,6 +294,7 @@ export function validate(s: GameState, a: Action): string | null {
     }
     case 'improve': {
       const t = s.tiles[a.tile];
+      if (f === 'elves') return 'Evergarden does not farm: enchant forests instead.';
       if (!t || t.owner !== f) return 'Improve your own land.';
       if (cityAt(s, t.id)) return 'Cities grow by upgrading, not by improvements.';
       if (t.improved >= MAX_IMPROVE) return 'This hex is fully improved.';
@@ -234,6 +309,7 @@ export function validate(s: GameState, a: Action): string | null {
       if (!ar.units.some((u) => u.type === 'druid')) return 'This army has no druid.';
       const t = s.tiles[ar.tile];
       if (t.terrain !== 'forest') return 'Druids enchant forests only.';
+      if (t.corrupted) return 'Blighted: stand here one round to heal the forest first.';
       if (t.enchanted) return 'This forest is already enchanted.';
       return null;
     }
@@ -262,6 +338,7 @@ export function applyAction(prev: GameState, a: Action): { state: GameState; eve
         ar.mp -= stepCost(s, f, t, ar.id);
         ar.tile = t;
         claim(s, t, f, captured, forested, events);
+        discover(s, t, f, events);
       }
       events.push({ type: 'moved', p: f, army: ar.id, path: a.path, captured, forested });
       break;
@@ -319,13 +396,52 @@ export function applyAction(prev: GameState, a: Action): { state: GameState; eve
     }
     case 'recruit': {
       p.gold -= unitCost(a.unit);
-      let ar = armiesAt(s, a.city).find((x) => x.owner === f);
+      const at = a.unit === 'treant' ? a.at! : a.city;
+      let ar = armiesAt(s, at).find((x) => x.owner === f);
       if (!ar) {
-        ar = { id: s.nextId++, owner: f, tile: a.city, units: [], mp: MOVE_POINTS, attacked: false, lowMorale: false };
+        ar = { id: s.nextId++, owner: f, tile: at, units: [], mp: MOVE_POINTS, attacked: false, lowMorale: false };
         s.armies.push(ar);
       }
       ar.units.push({ id: s.nextId++, type: a.unit, hp: UNIT_STATS[a.unit].hp });
-      events.push({ type: 'recruited', p: f, city: a.city, unit: a.unit, army: ar.id });
+      if (a.unit === 'treant') {
+        const t = s.tiles[at];
+        t.terrain = 'plains';
+        t.enchanted = false;
+      }
+      events.push({ type: 'recruited', p: f, city: at, unit: a.unit, army: ar.id });
+      break;
+    }
+    case 'hire': {
+      p.gold -= unitCost(a.unit);
+      const ar = armyById(s, a.army)!;
+      ar.units.push({ id: s.nextId++, type: a.unit, hp: UNIT_STATS[a.unit].hp });
+      events.push({ type: 'hired', p: f, fortress: a.fortress, unit: a.unit, army: ar.id });
+      break;
+    }
+    case 'terraform': {
+      const ar = armyById(s, a.army)!;
+      ar.mp -= 1;
+      ar.attacked = true;
+      const t = s.tiles[a.target];
+      if (f === 'necro') { t.corrupted = true; t.enchanted = false; events.push({ type: 'terraformed', p: f, tile: t.id, to: 'corrupted' }); }
+      else { t.terrain = 'plains'; t.corrupted = false; t.enchanted = false; events.push({ type: 'terraformed', p: f, tile: t.id, to: 'plains' }); }
+      break;
+    }
+    case 'spell': {
+      p.spell = SPELL_COOLDOWN;
+      const ar = a.army >= 0 ? armyById(s, a.army) : undefined;
+      if (f === 'necro' && ar) {
+        const bones = ar.units.filter((u) => u.type === 'skeleton').sort((x, y) => x.hp - y.hp).slice(0, 3).map((u) => u.id);
+        ar.units = ar.units.filter((u) => !bones.includes(u.id));
+        ar.units.push({ id: s.nextId++, type: 'colossus', hp: UNIT_STATS.colossus.hp });
+        events.push({ type: 'spellCast', p: f, spell: 'colossus', army: ar.id, tile: ar.tile });
+      } else if (f === 'elves' && ar) {
+        events.push({ type: 'spellCast', p: f, spell: 'volley', army: ar.id, tile: a.target! });
+        volley(s, rng, ar, a.target!, events);
+      } else {
+        s.walls.push({ tile: a.target!, hp: WALL_HP });
+        events.push({ type: 'spellCast', p: f, spell: 'wall', army: -1, tile: a.target! });
+      }
       break;
     }
     case 'build': {
@@ -377,20 +493,25 @@ function claim(s: GameState, tile: number, f: FactionId, captured: number[], for
   }
   t.owner = f;
   if (t.enchanted && f !== 'elves') t.enchanted = false;
-  // Evergarden: forest grows wherever the elves claim open land.
-  if (f === 'elves' && (t.terrain === 'plains' || t.terrain === 'desert')) {
-    t.terrain = 'forest';
-    forested.push(tile);
-  }
+  void forested;
   s.builds = s.builds.filter((b) => !(b.tile === tile && b.owner !== f));
 }
 
+/** Dwarf fortresses next to `tile` become known to everyone. */
+function discover(s: GameState, tile: number, f: Owner, events: GameEvent[]) {
+  for (const fo of s.fortresses) {
+    if (fo.discovered || !neighbors(s)[tile].includes(fo.tile)) continue;
+    fo.discovered = true;
+    events.push({ type: 'discovered', p: f as FactionId, tile: fo.tile });
+  }
+}
+
 // ------------------------------------------------------------------ combat
-function rollSide(rng: Rng, units: Unit[], side: 'att' | 'def', bonus: number): CombatDie[] {
+function rollSide(rng: Rng, units: Unit[], side: 'att' | 'def', bonus: number, foe: Owner): CombatDie[] {
   return units.map((u) => {
     const st = UNIT_STATS[u.type];
     const roll = 1 + rng.int(6);
-    const b = (side === 'att' ? st.attack : st.defense) + bonus;
+    const b = (side === 'att' ? st.attack : st.defense) + bonus + (st.counters && st.counters === foe ? 2 : 0);
     return { unit: u.id, type: u.type, roll, bonus: b, total: roll + b };
   });
 }
@@ -410,12 +531,14 @@ function fightRound(s: GameState, rng: Rng, round: 1 | 2, events: GameEvent[]) {
   const att = armyById(s, pf.army)!;
   const target = pf.target;
   const defArmies = armiesAt(s, target).filter((a) => a.owner !== att.owner);
-  const defOwner = defArmies[0].owner;
+  const wall = !defArmies.length ? wallAt(s, target) : undefined;
+  const defOwner: Owner = wall ? 'giants' : defArmies[0].owner;
   const tile = s.tiles[target];
   const attUnits = att.units;
-  const defUnits = defArmies.flatMap((a) => a.units);
+  const wallUnit: Unit | undefined = wall ? { id: -1 - target, type: 'wall', hp: wall.hp } : undefined;
+  const defUnits = wallUnit ? [wallUnit] : defArmies.flatMap((a) => a.units);
   const snapshot = (us: Unit[]) => us.map((u) => ({ ...u }));
-  const db = defenseBonus(s, tile, defOwner);
+  const db = wall ? { total: 0, labels: [] as string[] } : defenseBonus(s, tile, defOwner);
   const defMorale = defArmies.some((a) => a.lowMorale) ? -1 : 0;
   const attMorale = att.lowMorale ? -1 : 0;
   const ev: CombatEvent = {
@@ -424,10 +547,10 @@ function fightRound(s: GameState, rng: Rng, round: 1 | 2, events: GameEvent[]) {
     defender: { armies: defArmies.map((a) => a.id), tile: target, owner: defOwner, units: snapshot(defUnits) },
     attDice: [], defDice: [], shots: [], pairs: [], dead: [], raise: null, defenderWiped: false, attackerWiped: false,
     terrainBonus: [...db.labels, ...(defMorale ? ['Low morale −1'] : [])], attackMods: attMorale ? ['Low morale −1'] : [],
-    round, final: false, bounty: { att: 0, def: 0 },
+    round, final: false, bounty: { att: 0, def: 0 }, wall: !!wall,
   };
-  ev.attDice = rollSide(rng, attUnits, 'att', attMorale);
-  ev.defDice = rollSide(rng, defUnits, 'def', db.total + defMorale);
+  ev.attDice = rollSide(rng, attUnits, 'att', attMorale, defOwner);
+  ev.defDice = rollSide(rng, defUnits, 'def', db.total + defMorale, att.owner);
   const dead = new Set<number>();
 
   // Lead Belchers: a natural 6 fires an extra shot before the exchange.
@@ -452,11 +575,20 @@ function fightRound(s: GameState, rng: Rng, round: 1 | 2, events: GameEvent[]) {
   const n = Math.min(A.length, D.length);
   for (let i = 0; i < n; i++) {
     const attWins = A[i].total > D[i].total;
-    const victim = attWins ? wound(defUnits, dead) : wound(attUnits, dead);
+    // A wall never strikes back.
+    const victim = attWins ? wound(defUnits, dead) : wall ? -1 : wound(attUnits, dead);
     const pair: CombatPair = { att: A[i].unit, def: D[i].unit, winner: attWins ? 'att' : 'def', victim };
     ev.pairs.push(pair);
   }
   ev.dead = [...dead];
+  if (wall && wallUnit) {
+    wall.hp = wallUnit.hp;
+    att.mp = 0;
+    if (wall.hp <= 0) {
+      s.walls = s.walls.filter((w) => w !== wall);
+      events.push({ type: 'wallFallen', p: att.owner as FactionId, tile: target });
+    }
+  }
 
   // Remove the fallen, pay bounties.
   for (const ar of [att, ...defArmies]) ar.units = ar.units.filter((u) => !dead.has(u.id));
@@ -469,11 +601,46 @@ function fightRound(s: GameState, rng: Rng, round: 1 | 2, events: GameEvent[]) {
   if (pd) { pd.kills += killedAtt.length; pd.gold += ev.bounty.def; }
   pf.deaths += dead.size;
 
-  ev.defenderWiped = !defArmies.some((a) => a.units.length);
+  ev.defenderWiped = wall ? wall.hp <= 0 : !defArmies.some((a) => a.units.length);
   ev.attackerWiped = att.units.length === 0;
   ev.final = round === 2 || ev.defenderWiped || ev.attackerWiped;
   events.push(ev);
   if (ev.final) endFight(s, rng, events);
+}
+
+/** Arrow Rain: the archers shoot, the target cannot hurt them. */
+function volley(s: GameState, rng: Rng, ar: Army, target: number, events: GameEvent[]) {
+  const archers = ar.units.filter((u) => u.type === 'archer');
+  const defArmies = armiesAt(s, target).filter((a) => a.owner !== ar.owner);
+  const defOwner = defArmies[0].owner;
+  const defUnits = defArmies.flatMap((a) => a.units);
+  const db = defenseBonus(s, s.tiles[target], defOwner);
+  const ev: CombatEvent = {
+    type: 'combat', p: ar.owner as FactionId,
+    attacker: { army: ar.id, tile: ar.tile, owner: ar.owner, units: archers.map((u) => ({ ...u })) },
+    defender: { armies: defArmies.map((a) => a.id), tile: target, owner: defOwner, units: defUnits.map((u) => ({ ...u })) },
+    attDice: rollSide(rng, archers, 'att', 0, defOwner), defDice: rollSide(rng, defUnits, 'def', db.total, ar.owner),
+    shots: [], pairs: [], dead: [], raise: null, defenderWiped: false, attackerWiped: false, terrainBonus: db.labels,
+    attackMods: ['Arrow Rain'], round: 1, final: true, bounty: { att: 0, def: 0 }, volley: true,
+  };
+  const dead = new Set<number>();
+  const A = [...ev.attDice].sort((x, y) => y.total - x.total);
+  const D = [...ev.defDice].sort((x, y) => y.total - x.total);
+  for (let i = 0; i < Math.min(A.length, D.length); i++) {
+    const hit = A[i].total > D[i].total;
+    ev.pairs.push({ att: A[i].unit, def: D[i].unit, winner: hit ? 'att' : 'def', victim: hit ? wound(defUnits, dead) : -1 });
+  }
+  ev.dead = [...dead];
+  for (const d of defArmies) d.units = d.units.filter((u) => !dead.has(u.id));
+  const killed = defUnits.filter((u) => dead.has(u.id));
+  ev.bounty.att = killed.reduce((g, u) => g + bounty(u.type), 0);
+  const pa = player(s, ar.owner as FactionId)!;
+  pa.gold += ev.bounty.att;
+  pa.kills += killed.length;
+  s.armies = s.armies.filter((x) => x.units.length > 0);
+  ev.defenderWiped = !defArmies.some((a) => a.units.length);
+  events.push(ev);
+  checkElimination(s, events);
 }
 
 /** After the last round: the dead may rise, empty armies vanish. */
@@ -518,6 +685,21 @@ function startTurn(s: GameState, _rng: Rng, events: GameEvent[], first: boolean)
   const f = p.faction;
   const nb = neighbors(s);
   for (const ar of ownArmies(s, f)) { ar.mp = MOVE_POINTS; ar.attacked = false; }
+  if (!first && p.spell > 0) p.spell--;
+
+  // Evergarden: where elves stood a whole round, forest grows or a blighted forest heals.
+  if (f === 'elves' && !first) {
+    for (const ar of ownArmies(s, f)) {
+      const t = s.tiles[ar.tile];
+      if (cityAt(s, t.id)) continue;
+      if (t.terrain === 'forest' && t.corrupted) { t.corrupted = false; events.push({ type: 'terraformed', p: f, tile: t.id, to: 'cleansed' }); }
+      else if ((t.terrain === 'plains' || t.terrain === 'desert') && canGrowForest(s, t.id)) {
+        t.terrain = 'forest';
+        t.improved = 0;
+        events.push({ type: 'terraformed', p: f, tile: t.id, to: 'forest' });
+      }
+    }
+  }
 
   // Construction.
   for (const b of s.builds.filter((x) => x.owner === f)) {

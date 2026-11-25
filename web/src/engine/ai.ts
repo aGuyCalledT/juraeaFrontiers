@@ -1,10 +1,10 @@
 import { hexDistance } from './hex';
 import {
   TERRAIN_COST, armiesAt, armyStrength, attackTargets, cityAt, currentPlayer, defenseBonus, neighbors, ownArmies, ownCities,
-  pathTo, reachable, validate,
+  pathTo, reachable, terraformTargets, unitCount, validate, wallAt,
 } from './rules';
 import type { Action, Army, FactionId, GameState } from './types';
-import { ARMY_FREE_SIZE, CITY_COST, FACTION_UNITS, IMPROVE_COST, MAX_CITY_LEVEL, MAX_IMPROVE, UNIT_STATS, UPGRADE_COST, unitCost } from './unitstats';
+import { ARMY_FREE_SIZE, CITY_COST, DWARF_COST, DWARF_UNITS, FACTION_UNITS, IMPROVE_COST, MAX_CITY_LEVEL, MAX_IMPROVE, UNIT_STATS, UPGRADE_COST, unitCost } from './unitstats';
 
 // Armies the AI has finished with this turn (AI runs on one machine only).
 let doneKey = '';
@@ -58,7 +58,8 @@ export function aiNextAction(s: GameState): Action {
   for (const a of mine) {
     if (cityAt(s, a.tile)) continue;
     const here = armiesAt(s, a.tile).filter((x) => x.owner === f);
-    if (here.length === 2 && here.every((x) => !attackTargets(s, x).length) && here[0].units.length + here[1].units.length <= ARMY_FREE_SIZE) {
+    const tending = f === 'elves' && here.some((x) => x.units.some((u) => u.type === 'druid') && x.units.length <= 4);
+    if (!tending && here.length === 2 && here.every((x) => !attackTargets(s, x).length) && here[0].units.length + here[1].units.length <= ARMY_FREE_SIZE) {
       return { type: 'merge', p: f, tile: a.tile };
     }
   }
@@ -71,12 +72,23 @@ export function aiNextAction(s: GameState): Action {
     if (act) return act;
   }
 
+  // 1a2. Elves send a druid (with an archer escort) to tend the forests.
+  if (f === 'elves' && mine.filter((a) => a.units.some((u) => u.type === 'druid') && a.units.length <= 4).length < 2) {
+    for (const a of mine) {
+      const druid = a.units.find((u) => u.type === 'druid');
+      if (!druid || a.units.length < 4 || armiesAt(s, a.tile).filter((x) => x.owner === f).length >= 2) continue;
+      const escort = a.units.find((u) => u.type === 'archer');
+      const act = legal(s, { type: 'split', p: f, army: a.id, units: escort ? [druid.id, escort.id] : [druid.id] });
+      if (act) return act;
+    }
+  }
+
   // 1b. Big armies next to enemies split, because every army may attack once per turn.
   for (const a of mine) {
     if (a.units.length < 6 || cityAt(s, a.tile) || armiesAt(s, a.tile).length >= 2) continue;
     const targets = attackTargets(s, a);
     if (!targets.length) continue;
-    const weakest = Math.min(...targets.map((t) => defStrength(s, t, armiesAt(s, t)[0].owner)));
+    const weakest = Math.min(...targets.map((t) => defStrength(s, t, armiesAt(s, t)[0]?.owner ?? 'giants')));
     const sorted = [...a.units].sort((x, y) => UNIT_STATS[y.type].tier - UNIT_STATS[x.type].tier);
     const half: number[] = [];
     let str = 0;
@@ -88,6 +100,46 @@ export function aiNextAction(s: GameState): Action {
     if (half.length && str >= weakest * 1.2) {
       const act = legal(s, { type: 'split', p: f, army: a.id, units: half });
       if (act) return act;
+    }
+  }
+
+  // 1c. Faction spell.
+  if (p.spell === 0) {
+    if (f === 'necro') {
+      const a = mine.find((x) => x.units.filter((u) => u.type === 'skeleton').length >= 3);
+      if (a) { const act = legal(s, { type: 'spell', p: f, army: a.id }); if (act) return act; }
+    } else if (f === 'elves') {
+      for (const a of mine) {
+        if (!a.units.some((u) => u.type === 'archer')) continue;
+        const t = nb[a.tile].find((x) => armiesAt(s, x).some((e) => e.owner !== f));
+        if (t !== undefined) { const act = legal(s, { type: 'spell', p: f, army: a.id, target: t }); if (act) return act; }
+      }
+    } else {
+      // Wall off the approach to a threatened city.
+      for (const c of cities) {
+        const enemyNear = s.armies.some((e) => e.owner !== f && e.owner !== 'neutral' && hexDistance(s.tiles[e.tile].q, s.tiles[e.tile].r, s.tiles[c.tile].q, s.tiles[c.tile].r) <= 3);
+        if (!enemyNear) continue;
+        for (const t of nb[c.tile]) { const act = legal(s, { type: 'spell', p: f, army: -1, target: t }); if (act) return act; }
+      }
+    }
+  }
+
+  // 1d. Mammoths clear and necromancers blight elven forests near them.
+  const elvenLand = (t: number) => s.tiles[t].owner === 'elves' || s.tiles[t].enchanted;
+  for (const a of mine) {
+    if (a.attacked || bestAttack(s, a)) continue;
+    const t = terraformTargets(s, a).find(elvenLand);
+    if (t !== undefined) return { type: 'terraform', p: f, army: a.id, target: t };
+  }
+
+  // 1e. Hire dwarves that counter the strongest rival.
+  if (p.gold >= DWARF_COST + 4) {
+    const rivals = s.players.filter((x) => x.alive && x.faction !== f).sort((x, y) => unitCount(s, y.faction) - unitCount(s, x.faction));
+    const want = DWARF_UNITS.find((u) => UNIT_STATS[u].counters === rivals[0]?.faction);
+    for (const fo of s.fortresses) {
+      if (!fo.discovered || !want) continue;
+      const a = mine.find((x) => nb[fo.tile].includes(x.tile));
+      if (a) { const act = legal(s, { type: 'hire', p: f, fortress: fo.tile, unit: want, army: a.id }); if (act) return act; }
     }
   }
 
@@ -119,7 +171,13 @@ export function aiNextAction(s: GameState): Action {
     if (pick) {
       // Recruit in the city closest to the enemy.
       const front = [...cities].sort((a, b) => nearestEnemy(s, f, a.tile) - nearestEnemy(s, f, b.tile))[0];
-      const act = legal(s, { type: 'recruit', p: f, city: front.tile, unit: pick });
+      let act: Action | null = null;
+      if (pick === 'treant') {
+        const grove = s.tiles.filter((t) => t.owner === 'elves' && t.enchanted && !t.corrupted).sort((a, b) => nearestEnemy(s, f, a.id) - nearestEnemy(s, f, b.id))[0];
+        if (grove) act = legal(s, { type: 'recruit', p: f, city: front.tile, unit: pick, at: grove.id });
+        if (!act) act = legal(s, { type: 'recruit', p: f, city: front.tile, unit: t2 });
+      } else act = legal(s, { type: 'recruit', p: f, city: front.tile, unit: pick });
+      if (!act && pick !== t1) act = legal(s, { type: 'recruit', p: f, city: front.tile, unit: t1 });
       if (act) return act;
     }
   }
@@ -171,6 +229,8 @@ function nearestEnemy(s: GameState, f: FactionId, tile: number): number {
 }
 
 function defStrength(s: GameState, tile: number, owner: Army['owner']): number {
+  const w = wallAt(s, tile);
+  if (w && !armiesAt(s, tile).length) return 7.5 * w.hp * 1.5;
   const units = armiesAt(s, tile).flatMap((a) => a.units);
   return armyStrength(units, 'def', defenseBonus(s, s.tiles[tile], owner).total);
 }
@@ -181,7 +241,7 @@ function bestAttack(s: GameState, army: Army): Action | null {
   let best: { tile: number; score: number } | null = null;
   const mine = armyStrength(army.units, 'att');
   for (const t of attackTargets(s, army)) {
-    const owner = armiesAt(s, t)[0].owner;
+    const owner = armiesAt(s, t)[0]?.owner ?? 'giants';
     const theirs = defStrength(s, t, owner);
     const ratio = mine / Math.max(1, theirs);
     const besiegesMe = s.cities.some((c) => c.owner === f && nb[c.tile].includes(t));
@@ -202,6 +262,19 @@ function bestMove(s: GameState, army: Army, enemyCities: number[], allEnemyCitie
   if (!inCity && allEnemyCities.some((c) => nb[c].includes(army.tile))) return null;
 
   const goals: number[] = [];
+  // Druids tend the woods: walk to the nearest own forest that is not yet enchanted.
+  if (f === 'elves' && army.units.some((u) => u.type === 'druid') && army.units.length <= 4) {
+    const groves = s.tiles.filter((t) => t.terrain === 'forest' && !t.enchanted && (t.owner === 'elves' || t.owner === null) && !cityAt(s, t.id) &&
+      !armiesAt(s, t.id).some((a) => a.owner !== f)).map((t) => t.id);
+    if (groves.length && !groves.includes(army.tile)) {
+      const field = distanceField(s, groves);
+      const reach = reachable(s, army);
+      let best: { tile: number; d: number } | null = null;
+      for (const [t, r] of reach) { if (!r.stop || cityAt(s, t)) continue; const d = field.get(t) ?? Infinity; if (!best || d < best.d) best = { tile: t, d }; }
+      if (best && best.d < (field.get(army.tile) ?? Infinity)) return { type: 'move', p: f, army: army.id, path: pathTo(reach, best.tile) };
+    }
+    if (groves.includes(army.tile) || s.tiles[army.tile].enchanted) return null;
+  }
   const free = (t: number) => s.tiles[t].terrain !== 'water' && !cityAt(s, t) && !armiesAt(s, t).some((a) => a.owner !== f);
   // Siege spots next to enemy cities (once the army is strong enough to hold them).
   if (mine >= 14 || myPower > 40) for (const c of enemyCities) for (const t of nb[c]) if (free(t)) goals.push(t);
