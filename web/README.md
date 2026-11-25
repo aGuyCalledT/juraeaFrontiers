@@ -4,6 +4,13 @@ Risk-style conquest on a Catan-like hex island. Death Cults, Evergarden and the
 Giants fight for Juräa. Play against AI, pass-and-play on one device (hotseat),
 or online with friends.
 
+## Play without installing anything
+
+Open `play/juraea-frontiers.html` (repo root) in a browser by double-clicking it.
+Everything is inside that one file. Online play needs the relay server; AI and
+hotseat games work offline. Rebuild it after code changes with
+`npm run build:single`.
+
 ## Run it locally
 
 ```bash
