@@ -129,6 +129,11 @@ Every faction has one spell. It is ready after 3 of its own turns and recharges 
 - With **Iron Gut attack +1** (instead of +2): Evergarden 37 %, Giants 30 %, Death Cults 33 % (30 games).
 - Enchanted forests at 1 gold instead of 2: Evergarden fell to about 10 %.
 
+## Balance notes (AI against AI, 150 games, rules v2.3)
+- Average **31 rounds**; 4 % of games hit the 80-round cap.
+- Wins: Evergarden 38 %, Death Cults 37 %, Giants 21 %.
+- Raising on 5–6 lifted the Death Cults from about 12 % to 37 %. With Iron Gut at +1 and dwarves dearer for non-finders, the Giants are now the weakest AI faction.
+
 ## Playtesting (v2.3)
 - The pause menu and the victory screen have a **Playtest report**: add notes, then copy it (or it downloads as a text file if the browser blocks the clipboard).
 - The report lists, per faction: result, income, bounty and loot, upkeep, gold spent on units and buildings, recruits, dwarves hired, units slain and lost, spells cast, forests changed, and peak units, cities and hexes.
