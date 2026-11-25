@@ -1,7 +1,7 @@
-import '@fontsource/lilita-one/400.css';
-import '@fontsource/fredoka/400.css';
-import '@fontsource/fredoka/500.css';
-import '@fontsource/fredoka/600.css';
+import '@fontsource/lilita-one/latin-400.css';
+import '@fontsource/fredoka/latin-400.css';
+import '@fontsource/fredoka/latin-500.css';
+import '@fontsource/fredoka/latin-600.css';
 import './styles.css';
 import { sfx } from './audio';
 import { FACTIONS, FACTION_ORDER } from './engine/factions';
