@@ -1,128 +1,208 @@
-import { COSTS, FACTIONS } from './factions';
-import { combatMods, currentPlayer, neighbors, ownedTiles, reachable } from './rules';
-import type { Action, FactionId, GameState, Tile } from './types';
+import { hexDistance } from './hex';
+import {
+  TERRAIN_COST, armiesAt, armyStrength, attackTargets, cityAt, currentPlayer, defenseBonus, neighbors, ownArmies, ownCities,
+  pathTo, reachable, validate,
+} from './rules';
+import type { Action, Army, FactionId, GameState } from './types';
+import { CITY_COST, FACTION_UNITS, MAX_CITY_LEVEL, UNIT_STATS, UPGRADE_COST, unitCost } from './unitstats';
+
+// Armies the AI has finished with this turn (AI runs on one machine only).
+let doneKey = '';
+const done = new Set<number>();
+
+function legal(s: GameState, a: Action): Action | null {
+  return validate(s, a) ? null : a;
+}
+
+/** Terrain-cost distance from every hex to the nearest goal hex. */
+function distanceField(s: GameState, goals: number[]): Map<number, number> {
+  const nb = neighbors(s);
+  const dist = new Map<number, number>();
+  const open: number[] = [];
+  for (const g of goals) { dist.set(g, 0); open.push(g); }
+  while (open.length) {
+    open.sort((a, b) => dist.get(a)! - dist.get(b)!);
+    const cur = open.shift()!;
+    for (const n of nb[cur]) {
+      const t = s.tiles[n];
+      if (t.terrain === 'water' || cityAt(s, n)) continue;
+      const d = dist.get(cur)! + TERRAIN_COST[s.tiles[cur].terrain];
+      if (d < (dist.get(n) ?? Infinity)) { dist.set(n, d); open.push(n); }
+    }
+  }
+  return dist;
+}
 
 /** Picks the AI's next single action, so the UI can animate one step at a time. */
 export function aiNextAction(s: GameState): Action {
   const p = currentPlayer(s);
   const f = p.faction;
+  const key = `${s.turn}-${f}`;
+  if (key !== doneKey) { doneKey = key; done.clear(); }
   const nb = neighbors(s);
-  const T = s.tiles;
-  const hostile = (t: Tile) => nb[t.id].map((n) => T[n]).filter((x) => x.terrain !== 'water' && x.owner !== f);
-  const threat = (t: Tile) =>
-    hostile(t).filter((x) => x.owner !== 'neutral').reduce((a, x) => a + Math.max(0, x.troops - 1), 0);
-  const mine = ownedTiles(s, f);
-  const frontier = mine.filter((t) => hostile(t).length > 0);
+  const mine = ownArmies(s, f);
+  const cities = ownCities(s, f);
+  const enemyCities = s.cities.filter((c) => c.owner !== f);
+  const myPower = mine.reduce((n, a) => n + armyStrength(a.units, 'att'), 0);
 
-  if (s.pending) {
-    const from = T[s.pending.from];
-    const stillExposed = threat(from) > 0;
-    const n = stillExposed
-      ? Math.max(s.pending.min, Math.floor(s.pending.max * 0.6))
-      : s.pending.max;
-    return { type: 'move', p: f, n };
+  // 1. Merge armies sharing a hex once they have nothing left to attack.
+  for (const a of mine) {
+    if (cityAt(s, a.tile)) continue;
+    const here = armiesAt(s, a.tile).filter((x) => x.owner === f);
+    if (here.length === 2 && here.every((x) => !attackTargets(s, x).length)) return { type: 'merge', p: f, tile: a.tile };
   }
 
-  const targetValue = (from: Tile, to: Tile) => {
-    const mods = combatMods(s, from, to);
-    const defStrength = to.troops + mods.defBonus * 0.8 + (to.stronghold ? 1.5 : 0);
-    const adv = from.troops - 1 - defStrength;
-    let value = adv;
-    if (to.capital) value += 4;
-    const region = s.regions[to.region];
-    const missing = region.tiles.filter((id) => T[id].owner !== f).length;
-    if (missing === 1) value += 2.5;
-    if (to.terrain === FACTIONS[f].resourceTerrain) value += 0.8;
-    if (to.terrain === 'plains') value += 0.3;
-    return { adv, value };
-  };
-
-  const bestAttack = () => {
-    let best: { from: Tile; to: Tile; value: number } | null = null;
-    for (const from of frontier) {
-      if (from.troops < 2) continue;
-      for (const to of hostile(from)) {
-        const { adv, value } = targetValue(from, to);
-        const ok = adv >= 1 || (to.capital && from.troops >= to.troops + 2);
-        if (ok && (!best || value > best.value)) best = { from, to, value };
-      }
+  // 1b. Big armies next to enemies split, because every army may attack once per turn.
+  for (const a of mine) {
+    if (a.units.length < 6 || cityAt(s, a.tile) || armiesAt(s, a.tile).length >= 2) continue;
+    const targets = attackTargets(s, a);
+    if (!targets.length) continue;
+    const weakest = Math.min(...targets.map((t) => defStrength(s, t, armiesAt(s, t)[0].owner)));
+    const sorted = [...a.units].sort((x, y) => UNIT_STATS[y.type].tier - UNIT_STATS[x.type].tier);
+    const half: number[] = [];
+    let str = 0;
+    for (const u of sorted) {
+      if (str >= weakest * 1.4 || half.length >= a.units.length - 3) break;
+      half.push(u.id);
+      str += armyStrength([u], 'att');
     }
-    return best;
-  };
-
-  if (s.phase === 'reinforce') {
-    const ab = FACTIONS[f].ability;
-    if (!p.abilityUsed && p.power >= ab.cost) {
-      const target = abilityTarget(s, f, frontier, threat);
-      if (target !== null) return { type: 'ability', p: f, tile: target };
-    }
-    const noChamp = frontier.filter((t) => !t.champion).sort((a, b) => b.troops - a.troops);
-    const champions = mine.filter((t) => t.champion).length;
-    if (p.gold >= COSTS.champion && noChamp.length && champions < 3 && p.gold >= COSTS.champion + (champions ? 3 : 0)) {
-      return { type: 'buy', p: f, item: 'champion', tile: noChamp[0].id };
-    }
-    if (p.gold >= COSTS.troop && p.gold - COSTS.troop >= (champions < 2 ? 4 : 0)) {
-      return { type: 'buy', p: f, item: 'troop' };
-    }
-    if (p.reinforcements > 0) {
-      const cap = mine.find((t) => t.capital === f);
-      if (cap) {
-        const need = threat(cap) - cap.troops + 2;
-        if (need > 0) return { type: 'place', p: f, tile: cap.id, n: Math.min(p.reinforcements, need) };
-      }
-      // Stack on the hex with the best attack opportunity, weighed by danger.
-      let bestTile = frontier[0] ?? mine[0];
-      let bestScore = -Infinity;
-      for (const t of frontier) {
-        let opp = -Infinity;
-        for (const h of hostile(t)) {
-          const v = targetValue({ ...t, troops: t.troops + p.reinforcements }, h).value;
-          opp = Math.max(opp, v);
-        }
-        const score = opp + threat(t) * 0.35 + (t.champion ? 1 : 0);
-        if (score > bestScore) { bestScore = score; bestTile = t; }
-      }
-      const n = frontier.length > 3 && p.reinforcements > 4 ? Math.ceil(p.reinforcements * 0.7) : p.reinforcements;
-      return { type: 'place', p: f, tile: bestTile.id, n };
-    }
-    return { type: 'endPhase', p: f };
-  }
-
-  if (s.phase === 'attack') {
-    const atk = bestAttack();
-    if (atk) return { type: 'attack', p: f, from: atk.from.id, to: atk.to.id, blitz: true };
-    return { type: 'endPhase', p: f };
-  }
-
-  if (s.phase === 'fortify' && !s.fortifyUsed) {
-    const interior = mine.filter((t) => hostile(t).length === 0 && t.troops > 1).sort((a, b) => b.troops - a.troops);
-    for (const src of interior) {
-      const reach = [...reachable(s, src.id, f)].map((id) => T[id]).filter((t) => hostile(t).length > 0);
-      if (!reach.length) continue;
-      reach.sort((a, b) => threat(b) - b.troops - (threat(a) - a.troops));
-      return { type: 'fortify', p: f, from: src.id, to: reach[0].id, n: src.troops - 1 };
+    if (half.length && str >= weakest * 1.2) {
+      const act = legal(s, { type: 'split', p: f, army: a.id, units: half });
+      if (act) return act;
     }
   }
-  return { type: 'endPhase', p: f };
+
+  // 2. Defend: upgrade a city with enemies next to it.
+  for (const c of cities) {
+    const threatened = nb[c.tile].some((t) => armiesAt(s, t).some((a) => a.owner !== f && a.owner !== 'neutral'));
+    const cap = Math.min(MAX_CITY_LEVEL, c.capital || cities.length === 1 ? 2 : 1);
+    if (threatened && c.level < cap && p.gold >= UPGRADE_COST(f) * 2) {
+      const a = legal(s, { type: 'upgrade', p: f, city: c.tile });
+      if (a) return a;
+    }
+  }
+
+  // 3. Expand: found another city when rich enough.
+  const wantCities = 1 + Math.min(3, Math.floor(s.turn / 4));
+  if (cities.length < wantCities && p.gold >= CITY_COST(f)) {
+    for (const a of mine) {
+      const act = legal(s, { type: 'build', p: f, army: a.id });
+      if (act) return act;
+    }
+  }
+
+  // 4. Recruit with what is left, keeping a little for a city if we lack one.
+  const reserve = cities.length < wantCities ? Math.min(p.gold, CITY_COST(f)) * 0.5 : 0;
+  if (cities.length) {
+    const [t1, t2, t3] = FACTION_UNITS[f];
+    const budget = p.gold - reserve;
+    const pick = budget >= unitCost(t3) + unitCost(t1) ? t3 : budget >= unitCost(t2) + unitCost(t1) ? t2 : budget >= unitCost(t1) ? t1 : null;
+    if (pick) {
+      // Recruit in the city closest to the enemy.
+      const front = [...cities].sort((a, b) => nearestEnemy(s, f, a.tile) - nearestEnemy(s, f, b.tile))[0];
+      const act = legal(s, { type: 'recruit', p: f, city: front.tile, unit: pick });
+      if (act) return act;
+    }
+  }
+
+  // 5. Druids enchant their forest.
+  if (f === 'elves') {
+    for (const a of mine) {
+      const act = legal(s, { type: 'enchant', p: f, army: a.id });
+      if (act) return act;
+    }
+  }
+
+  // 6. Each army: attack if favourable, otherwise march towards a goal.
+  const order = [...mine].sort((a, b) => (cityAt(s, b.tile) ? 1 : 0) - (cityAt(s, a.tile) ? 1 : 0));
+  // Focus: the enemy city closest to our forces, so armies converge instead of scattering.
+  const centre = mine.length ? mine : cities.map((c) => ({ tile: c.tile }));
+  const focus = enemyCities
+    .map((c) => ({ c, d: centre.reduce((n, a) => n + hexDistance(s.tiles[a.tile].q, s.tiles[a.tile].r, s.tiles[c.tile].q, s.tiles[c.tile].r), 0) / centre.length - (c.siege[f] ?? 0) * 3 + c.level }))
+    .sort((a, b) => a.d - b.d)[0]?.c;
+  for (const army of order) {
+    if (done.has(army.id)) continue;
+    const atk = bestAttack(s, army);
+    if (atk) return atk;
+    const mv = bestMove(s, army, focus ? [focus.tile] : [], enemyCities.map((c) => c.tile), myPower);
+    if (mv) return mv;
+    done.add(army.id);
+  }
+  // Recruits still inside a city must leave before the turn can end.
+  for (const army of mine) {
+    if (!cityAt(s, army.tile)) continue;
+    const reach = reachable(s, army);
+    const exit = [...reach].find(([t, r]) => r.stop && !cityAt(s, t));
+    if (exit) return { type: 'move', p: f, army: army.id, path: pathTo(reach, exit[0]) };
+  }
+  return { type: 'endTurn', p: f };
 }
 
-function abilityTarget(s: GameState, f: FactionId, frontier: Tile[], threat: (t: Tile) => number): number | null {
+function nearestEnemy(s: GameState, f: FactionId, tile: number): number {
+  const t = s.tiles[tile];
+  let best = Infinity;
+  for (const a of s.armies) if (a.owner !== f && a.owner !== 'neutral') best = Math.min(best, hexDistance(t.q, t.r, s.tiles[a.tile].q, s.tiles[a.tile].r));
+  return best;
+}
+
+function defStrength(s: GameState, tile: number, owner: Army['owner']): number {
+  const units = armiesAt(s, tile).flatMap((a) => a.units);
+  return armyStrength(units, 'def', defenseBonus(s, s.tiles[tile], owner).total);
+}
+
+function bestAttack(s: GameState, army: Army): Action | null {
+  const f = army.owner as FactionId;
   const nb = neighbors(s);
-  const T = s.tiles;
-  if (f === 'necro') {
-    const t = [...frontier].sort((a, b) => threat(b) + b.troops - (threat(a) + a.troops))[0];
-    return t ? t.id : null;
+  let best: { tile: number; score: number } | null = null;
+  const mine = armyStrength(army.units, 'att');
+  for (const t of attackTargets(s, army)) {
+    const owner = armiesAt(s, t)[0].owner;
+    const theirs = defStrength(s, t, owner);
+    const ratio = mine / Math.max(1, theirs);
+    const besiegesMe = s.cities.some((c) => c.owner === f && nb[c.tile].includes(t));
+    const need = besiegesMe ? 0.85 : owner === 'neutral' ? 1.25 : 1.05;
+    if (ratio >= need && (!best || ratio > best.score)) best = { tile: t, score: ratio };
   }
-  if (f === 'giants') {
-    const cands = frontier.filter((t) => !t.stronghold).sort((a, b) => (b.capital ? 10 : 0) + threat(b) - ((a.capital ? 10 : 0) + threat(a)));
-    return cands.length && (threat(cands[0]) > 0 || cands[0].capital) ? cands[0].id : null;
+  return best ? { type: 'attack', p: f, army: army.id, target: best.tile } : null;
+}
+
+function bestMove(s: GameState, army: Army, enemyCities: number[], allEnemyCities: number[], myPower: number): Action | null {
+  const f = army.owner as FactionId;
+  if (army.mp <= 0) return null;
+  const nb = neighbors(s);
+  const inCity = !!cityAt(s, army.tile);
+  const mine = armyStrength(army.units, 'att');
+
+  // Already besieging? Hold position unless forced out of a city.
+  if (!inCity && allEnemyCities.some((c) => nb[c].includes(army.tile))) return null;
+
+  const goals: number[] = [];
+  const free = (t: number) => s.tiles[t].terrain !== 'water' && !cityAt(s, t) && !armiesAt(s, t).some((a) => a.owner !== f);
+  // Siege spots next to enemy cities (once the army is strong enough to hold them).
+  if (mine >= 14 || myPower > 40) for (const c of enemyCities) for (const t of nb[c]) if (free(t)) goals.push(t);
+  // Hexes next to armies we can beat.
+  for (const other of s.armies) {
+    if (other.owner === f) continue;
+    const theirs = defStrength(s, other.tile, other.owner);
+    if (mine / Math.max(1, theirs) >= 1.2) for (const t of nb[other.tile]) if (free(t)) goals.push(t);
   }
-  // Elves: grow forest on own frontier plains/desert first, then neighbouring land.
-  const own = frontier.filter((t) => t.terrain === 'plains' || t.terrain === 'desert').sort((a, b) => threat(b) - threat(a));
-  if (own.length) return own[0].id;
-  for (const t of frontier) for (const n of nb[t.id]) {
-    const x = T[n];
-    if (x.terrain === 'plains' || x.terrain === 'desert') return x.id;
+  // Otherwise claim unowned or enemy land.
+  if (!goals.length) for (const t of s.tiles) if (free(t.id) && t.owner !== f) goals.push(t.id);
+  if (!goals.length && !inCity) return null;
+
+  const field = distanceField(s, goals);
+  const reach = reachable(s, army);
+  const here = field.get(army.tile) ?? Infinity;
+  let best: { tile: number; score: number } | null = null;
+  for (const [t, r] of reach) {
+    if (!r.stop || cityAt(s, t)) continue;
+    const d = field.get(t) ?? Infinity;
+    // Avoid parking next to armies that would crush us.
+    const danger = nb[t].reduce((n, x) => n + armiesAt(s, x).filter((a) => a.owner !== f && a.owner !== 'neutral').reduce((m, a) => m + armyStrength(a.units, 'att'), 0), 0);
+    const score = d * 10 - defenseBonus(s, s.tiles[t], f).total * 2 + (danger > mine * 1.4 ? 40 : 0) + (s.tiles[t].owner !== f ? -3 : 0);
+    if (!best || score < best.score) best = { tile: t, score };
   }
-  return null;
+  if (!best) return null;
+  if (!inCity && (field.get(best.tile) ?? Infinity) >= here && s.tiles[best.tile].owner === f) return null;
+  return { type: 'move', p: f, army: army.id, path: pathTo(reach, best.tile) };
 }

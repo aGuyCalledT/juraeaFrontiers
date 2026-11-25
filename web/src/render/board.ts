@@ -3,6 +3,8 @@ import { HEX_SIZE, SQRT3, hexCorners, hexToPixel, key } from '../engine/hex';
 import { neighbors } from '../engine/rules';
 import type { GameState, Tile } from '../engine/types';
 import { BADGE_PATH, INK, TERRAIN_COLORS, castleId, decorations, use } from './art';
+import type { Army, FactionId } from '../engine/types';
+import { UNIT_STATS } from '../engine/unitstats';
 
 const NS = 'http://www.w3.org/2000/svg';
 const pts = (p: [number, number][]) => p.map(([x, y]) => `${x.toFixed(1)},${y.toFixed(1)}`).join(' ');
@@ -25,8 +27,6 @@ interface TileView {
   units: SVGGElement;
   badge: SVGGElement;
   badgeIn: SVGGElement;
-  badgeShape: SVGPathElement;
-  badgeText: SVGTextElement;
   last: string;
   terrain: string;
 }
@@ -107,7 +107,6 @@ export class Board {
       views[t.id] = this.makeTile(t);
     }
     this.views = views;
-    this.drawBorders(state);
     this.sync(state, true);
     this.fit(false);
   }
@@ -170,79 +169,71 @@ export class Board {
     </g>`;
     this.layers.tiles.appendChild(g);
     const badge = document.createElementNS(NS, 'g');
-    badge.setAttribute('class', 'badge');
-    badge.setAttribute('transform', `translate(${x.toFixed(1)} ${(y + 32).toFixed(1)}) scale(0.86)`);
-    badge.innerHTML = `<g class="badge-in"><path class="badge-shape" d="${BADGE_PATH}" stroke="${INK}" stroke-width="3" stroke-linejoin="round"/><path class="badge-shine" d="M-16 -12 L16 -12 L16 -7 L-16 -7 Z"/><text class="badge-text" y="7" text-anchor="middle"></text></g>`;
+    badge.setAttribute('class', 'stack');
+    badge.setAttribute('transform', `translate(${x.toFixed(1)} ${y.toFixed(1)})`);
+    badge.innerHTML = `<g class="badge-in"></g>`;
     this.layers.badges.appendChild(badge);
     const q = <T extends Element>(sel: string, root: Element = g) => root.querySelector(sel) as unknown as T;
     return {
       g, inner: q('.tile-in'), top: q('.top'), side: q('.side'), deco: q('.deco'), ring: q('.ring'),
-      build: q('.build'), units: q('.units'), badge, badgeIn: q('.badge-in', badge), badgeShape: q('.badge-shape', badge),
-      badgeText: q('.badge-text', badge), last: '', terrain: '',
+      build: q('.build'), units: q('.units'), badge, badgeIn: q('.badge-in', badge), last: '', terrain: '',
     };
-  }
-
-  private drawBorders(state: GameState) {
-    const nb = neighbors(state);
-    const segs: string[] = [];
-    for (const t of state.tiles) {
-      if (t.terrain === 'water') continue;
-      const { x, y } = hexToPixel(t.q, t.r);
-      const c = hexCorners(x, y, HEX_SIZE);
-      for (const n of nb[t.id]) {
-        const o = state.tiles[n];
-        if (o.terrain === 'water' || o.region === t.region || o.id < t.id) continue;
-        const op = hexToPixel(o.q, o.r);
-        // the shared edge: the two corners closest to the neighbour centre
-        const sorted = [...c].sort((a, b) => Math.hypot(a[0] - op.x, a[1] - op.y) - Math.hypot(b[0] - op.x, b[1] - op.y));
-        segs.push(`M${sorted[0][0].toFixed(1)} ${sorted[0][1].toFixed(1)} L${sorted[1][0].toFixed(1)} ${sorted[1][1].toFixed(1)}`);
-      }
-    }
-    this.layers.borders.innerHTML = `<path class="region-border" d="${segs.join(' ')}"/>`;
   }
 
   /** Updates tile visuals to match state. Returns ids whose visuals changed. */
   sync(state: GameState, force = false): number[] {
     this.state = state;
     const changed: number[] = [];
+    const cur = state.phase === 'play' ? state.players[state.current].faction : null;
     for (const t of state.tiles) {
       const v = this.views[t.id];
       if (!v) continue;
-      const sig = `${t.terrain}|${t.owner}|${t.troops}|${t.champion}|${t.stronghold}|${t.capital}`;
+      const armies = state.armies.filter((a) => a.tile === t.id);
+      const city = state.cities.find((c) => c.tile === t.id);
+      const build = state.builds.find((b) => b.tile === t.id);
+      const sig = JSON.stringify([t.terrain, t.owner, t.enchanted, armies.map((a) => [a.id, a.owner, a.mp, a.attacked, a.units.map((u) => u.type + u.hp)]), city, build, cur]);
       if (!force && sig === v.last) continue;
       v.last = sig;
       changed.push(t.id);
-      if (v.terrain !== t.terrain) {
-        v.terrain = t.terrain;
+      const hasBuilding = !!city || build?.kind === 'city';
+      const decoKey = t.terrain + (hasBuilding ? '*' : '');
+      if (v.terrain !== decoKey) {
+        v.terrain = decoKey;
         v.top.setAttribute('fill', `url(#g-${t.terrain})`);
         v.side.setAttribute('fill', `url(#gs-${t.terrain})`);
         v.g.classList.remove('t-plains', 't-forest', 't-mountain', 't-desert');
         v.g.classList.add('t-' + t.terrain);
-        v.deco.innerHTML = decorations(t);
+        v.deco.innerHTML = decorations(t, hasBuilding);
       }
-      const owner = t.owner ?? 'neutral';
-      const fac = owner === 'neutral' ? null : FACTIONS[owner];
+      const owner = t.owner;
+      const fac = owner && owner !== 'neutral' ? FACTIONS[owner] : null;
       v.ring.setAttribute('stroke', fac ? fac.color : 'none');
       v.g.classList.toggle('owned', !!fac);
+      v.g.classList.toggle('enchanted', t.enchanted);
       // Buildings
-      let build = '';
-      if (t.capital) build += use(castleId(t.capital), 0, -2, 62, `style="color:${FACTIONS[t.capital].color}"`);
-      if (t.stronghold) build += use('s-stronghold', 0, 22, 70);
-      if (!fac && !t.capital) build += use('s-camp', 26, 18, 26);
-      if (fac && !t.capital) build += use('s-flag', 34, -10, 30, `class="flag" style="color:${fac.color}"`);
-      v.build.innerHTML = build;
-      // Units: a few figures by army size, plus the champion.
-      const n = t.troops >= 8 ? 3 : t.troops >= 4 ? 2 : 1;
-      const fig = fac ? `u-${owner}` : 'u-neutral';
-      const col = fac ? fac.color : NEUTRAL.color;
-      const spots: [number, number][] = [[-30, 24], [-42, 12], [30, 24]];
-      let units = '';
-      for (let i = 0; i < n; i++) units += use(fig, spots[i][0], spots[i][1], i === 0 ? 30 : 26, `style="color:${col}"`);
-      if (t.champion && fac) units += use(`c-${owner}`, 28, 26, 34, `class="champ" style="color:${fac.accent}"`);
-      v.units.innerHTML = units;
-      v.badgeShape.setAttribute('fill', fac ? fac.color : NEUTRAL.dark);
-      v.badgeText.textContent = String(t.troops);
-      v.badge.classList.toggle('neutral', !fac);
+      let b = '';
+      if (t.enchanted) b += use('s-sparkle', -30, -24, 22) + use('s-sparkle', 32, -6, 16);
+      if (city) {
+        const cf = FACTIONS[city.owner];
+        b += use(castleId(city.owner), 0, city.capital ? -2 : -6, city.capital ? 64 : 54, `style="color:${cf.color}"`);
+        for (let i = 0; i < city.level; i++) b += use('s-star', -14 + i * 14 - (city.level - 1) * 0, -60, 16);
+      } else if (build?.kind === 'city') {
+        b += use('s-scaffold', 0, -4, 54, `style="color:${FACTIONS[build.owner].color}"`);
+      }
+      if (fac && !city && !build && !armies.length) b += use('s-flag', 34, -10, 30, `class="flag" style="color:${fac.color}"`);
+      v.build.innerHTML = b;
+      v.units.innerHTML = '';
+      // Armies and markers (drawn above all tiles).
+      let top = '';
+      if (armies.length === 1) top += armyToken(armies[0], 0, 36, 1, armies[0].owner === cur);
+      else if (armies.length === 2) top += armyToken(armies[0], -24, 30, 0.8, armies[0].owner === cur) + armyToken(armies[1], 24, 40, 0.8, armies[1].owner === cur);
+      if (city) {
+        const sieges = Object.entries(city.siege).filter(([, n]) => n);
+        sieges.forEach(([f, n], i) => { top += siegeMarker(f as FactionId, n!, 3 + city.level, 0, -78 - i * 26); });
+      }
+      if (build) top += buildMarker(build.kind, build.turnsLeft, 26, -46);
+      v.badgeIn.innerHTML = top;
+      v.badge.classList.toggle('has-army', armies.length > 0);
     }
     return changed;
   }
@@ -512,4 +503,40 @@ export class Board {
     this.camera.x = Math.max(minX - 100, Math.min(maxX + 100, this.camera.x));
     this.camera.y = Math.max(minY - 100, Math.min(maxY + 100, this.camera.y));
   }
+}
+
+const ownerColor = (o: Army['owner']) => (o === 'neutral' ? NEUTRAL.dark : FACTIONS[o].color);
+
+/** A small stack of unit figures with a count badge and movement pips. */
+export function armyToken(a: Army, x: number, y: number, k: number, active: boolean): string {
+  const units = [...a.units].sort((p, q) => UNIT_STATS[q.type].tier - UNIT_STATS[p.type].tier);
+  const shown: string[] = [];
+  for (const u of units) { if (!shown.includes(u.type)) shown.push(u.type); if (shown.length === 3) break; }
+  while (shown.length < Math.min(3, units.length)) shown.push(units[shown.length].type);
+  const size = 68 * k;
+  const spots = [[0, 0], [-19 * k, -8 * k], [19 * k, -8 * k]];
+  const order = [2, 1, 0].filter((i) => i < shown.length);
+  const figs = order.map((i) => use(`unit-${shown[i]}`, x + spots[i][0], y + spots[i][1] - 4 * k, size, i ? 'class="back"' : '')).join('');
+  const wounded = a.units.some((u) => u.hp < UNIT_STATS[u.type].hp);
+  const col = ownerColor(a.owner);
+  const bx = x + 26 * k, by = y - 4 * k;
+  const pips = active ? [0, 1, 2].map((i) => `<circle cx="${(x - 12 * k + i * 12 * k).toFixed(1)}" cy="${(y + 9 * k).toFixed(1)}" r="${(4 * k).toFixed(1)}" class="pip ${i < a.mp ? 'on' : ''}"/>`).join('') : '';
+  return `<g class="army ${active && a.mp <= 0 ? 'spent' : ''} ${a.attacked ? 'attacked' : ''}" data-army="${a.id}">
+    <ellipse cx="${x}" cy="${y + 2}" rx="${28 * k}" ry="${7 * k}" fill="#000" opacity=".18"/>
+    ${figs}
+    <g transform="translate(${bx.toFixed(1)} ${by.toFixed(1)}) scale(${(0.74 * k).toFixed(2)})"><path d="${BADGE_PATH}" fill="${col}" stroke="${INK}" stroke-width="3.5" stroke-linejoin="round"/><text class="badge-text" y="7" text-anchor="middle">${a.units.length}</text>${wounded ? `<circle cx="17" cy="-14" r="6" fill="#ff5a4a" stroke="${INK}" stroke-width="2.5"/>` : ''}</g>
+    ${pips}
+  </g>`;
+}
+
+function siegeMarker(f: FactionId, n: number, need: number, x: number, y: number): string {
+  const col = FACTIONS[f].color;
+  return `<g class="siege" transform="translate(${x} ${y})"><rect x="-30" y="-12" width="60" height="24" rx="8" fill="${col}" stroke="${INK}" stroke-width="3"/>
+    <path d="M-23 7 L-11 -6 M-11 7 L-23 -6" stroke="${INK}" stroke-width="5" stroke-linecap="round"/><path d="M-23 7 L-11 -6 M-11 7 L-23 -6" stroke="#eef2f5" stroke-width="2.4" stroke-linecap="round"/>
+    <text class="badge-text small" x="9" y="6" text-anchor="middle">${n}/${need}</text></g>`;
+}
+
+function buildMarker(kind: 'city' | 'upgrade', left: number, x: number, y: number): string {
+  return `<g class="buildmark" transform="translate(${x} ${y})"><circle r="12" fill="#ffd23f" stroke="${INK}" stroke-width="3"/>
+    <path d="M-5 5 L4 -4 M1 -7 L7 -1" stroke="${INK}" stroke-width="3" stroke-linecap="round"/><text class="badge-text small" x="16" y="12">${left}</text><title>${kind === 'city' ? 'City' : 'Upgrade'} ready in ${left} turn${left > 1 ? 's' : ''}</title></g>`;
 }

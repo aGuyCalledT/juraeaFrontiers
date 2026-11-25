@@ -1,7 +1,9 @@
+import type { UnitType } from './unitstats';
+
 export type FactionId = 'necro' | 'elves' | 'giants';
 export type Owner = FactionId | 'neutral';
 export type Terrain = 'plains' | 'forest' | 'mountain' | 'desert' | 'water';
-export type Phase = 'reinforce' | 'attack' | 'fortify' | 'over';
+export type Phase = 'play' | 'over';
 export type SlotKind = 'human' | 'ai' | 'off';
 
 export interface Tile {
@@ -10,19 +12,47 @@ export interface Tile {
   r: number;
   terrain: Terrain;
   region: number; // -1 for water
-  owner: Owner | null; // null for water
-  troops: number;
-  champion: boolean;
-  stronghold: boolean;
-  capital: FactionId | null;
-  deco: number; // stable per-tile random for decoration layout
+  /** Last side that stood here (null = nobody yet, also for water). */
+  owner: Owner | null;
+  enchanted: boolean;
+  deco: number;
+}
+
+export interface Unit {
+  id: number;
+  type: UnitType;
+  hp: number;
+}
+
+export interface Army {
+  id: number;
+  owner: Owner;
+  tile: number;
+  units: Unit[];
+  mp: number;
+  attacked: boolean;
+}
+
+export interface City {
+  tile: number;
+  owner: FactionId;
+  level: number;
+  /** Rounds each faction has besieged this city without a break. */
+  siege: Partial<Record<FactionId, number>>;
+  capital: boolean;
+}
+
+export interface Build {
+  tile: number;
+  owner: FactionId;
+  kind: 'city' | 'upgrade';
+  turnsLeft: number;
 }
 
 export interface Region {
   id: number;
   name: string;
   tiles: number[];
-  bonus: number;
 }
 
 export interface PlayerState {
@@ -33,18 +63,9 @@ export interface PlayerState {
   name: string;
   alive: boolean;
   gold: number;
-  power: number; // faction resource: souls / mana / ore
-  reinforcements: number;
-  abilityUsed: boolean;
-  conquered: number; // hexes conquered this turn
+  /** consecutive own turns started without a city */
+  noCity: number;
   kills: number;
-}
-
-export interface PendingMove {
-  from: number;
-  to: number;
-  min: number;
-  max: number;
 }
 
 export interface GameSetup {
@@ -54,71 +75,100 @@ export interface GameSetup {
 }
 
 export interface GameState {
-  version: 1;
+  version: 2;
   setup: GameSetup;
   rng: number;
   radius: number;
   tiles: Tile[];
   regions: Region[];
+  armies: Army[];
+  cities: City[];
+  builds: Build[];
   players: PlayerState[]; // turn order
   current: number;
   phase: Phase;
   turn: number;
-  fortifyUsed: boolean;
-  pending: PendingMove | null;
+  nextId: number;
   winner: FactionId | null;
   actionCount: number;
-  /** Undead Army trigger for the pending move-in */
-  raiseOnMove: boolean;
 }
 
 export type Action =
-  | { type: 'place'; p: FactionId; tile: number; n: number }
-  | { type: 'buy'; p: FactionId; item: 'troop' | 'champion'; tile?: number }
-  | { type: 'ability'; p: FactionId; tile: number }
-  | { type: 'attack'; p: FactionId; from: number; to: number; blitz: boolean }
-  | { type: 'move'; p: FactionId; n: number }
-  | { type: 'fortify'; p: FactionId; from: number; to: number; n: number }
-  | { type: 'endPhase'; p: FactionId };
+  | { type: 'move'; p: FactionId; army: number; path: number[] }
+  | { type: 'attack'; p: FactionId; army: number; target: number }
+  | { type: 'split'; p: FactionId; army: number; units: number[] }
+  | { type: 'merge'; p: FactionId; tile: number }
+  | { type: 'recruit'; p: FactionId; city: number; unit: UnitType }
+  | { type: 'build'; p: FactionId; army: number }
+  | { type: 'upgrade'; p: FactionId; city: number }
+  | { type: 'enchant'; p: FactionId; army: number }
+  | { type: 'endTurn'; p: FactionId };
 
-export interface DieRoll {
-  value: number; // raw 1..6
-  bonus: number; // added to this die
+export interface CombatDie {
+  unit: number; // unit id
+  type: UnitType;
+  roll: number;
+  bonus: number;
+  total: number;
+  /** removed before the comparison (died to a cannon shot) */
+  void?: boolean;
 }
 
-export interface CombatRound {
-  att: DieRoll[];
-  def: DieRoll[];
-  attLoss: number;
-  defLoss: number;
+export interface CannonShot {
+  side: 'att' | 'def';
+  shooter: number; // unit id
+  rolls: number[]; // each extra roll; >= 4 hits
+  hits: number[]; // unit ids wounded, in order
+}
+
+export interface CombatPair {
+  att: number; // unit id
+  def: number;
+  winner: 'att' | 'def';
+  victim: number; // unit id that took the hit
+}
+
+export interface RaiseResult {
+  rolls: number[];
+  priestRolls: number; // how many of the rolls came from death priests (the last ones)
+  raised: number;
+  army: number;
+}
+
+export interface CombatEvent {
+  type: 'combat';
+  p: FactionId;
+  attacker: { army: number; tile: number; owner: Owner; units: Unit[] };
+  defender: { armies: number[]; tile: number; owner: Owner; units: Unit[] };
+  attDice: CombatDie[];
+  defDice: CombatDie[];
+  shots: CannonShot[];
+  pairs: CombatPair[];
+  dead: number[]; // unit ids
+  raise: RaiseResult | null;
+  defenderWiped: boolean;
+  terrainBonus: string[];
 }
 
 export type GameEvent =
-  | { type: 'placed'; tile: number; n: number; p: FactionId }
-  | { type: 'bought'; item: 'troop' | 'champion'; tile?: number; p: FactionId }
-  | {
-      type: 'combat';
-      p: FactionId;
-      from: number;
-      to: number;
-      defender: Owner;
-      rounds: CombatRound[];
-      attMods: string[];
-      defMods: string[];
-      conquered: boolean;
-    }
-  | { type: 'conquered'; p: FactionId; tile: number; from: Owner }
-  | { type: 'moved'; from: number; to: number; n: number; p: FactionId }
-  | { type: 'ability'; p: FactionId; tile: number }
-  | { type: 'raised'; p: FactionId; tile: number; n: number }
-  | { type: 'eliminated'; p: FactionId; by: FactionId }
-  | { type: 'phase'; p: FactionId; phase: Phase }
+  | { type: 'moved'; p: FactionId; army: number; path: number[]; captured: number[]; forested: number[] }
+  | CombatEvent
+  | { type: 'split'; p: FactionId; army: number; newArmy: number; tile: number }
+  | { type: 'merged'; p: FactionId; army: number; tile: number }
+  | { type: 'recruited'; p: FactionId; city: number; unit: UnitType; army: number }
+  | { type: 'buildStarted'; p: FactionId; tile: number; kind: 'city' | 'upgrade' }
+  | { type: 'built'; p: FactionId; tile: number; kind: 'city' | 'upgrade'; level: number }
+  | { type: 'enchanted'; p: FactionId; tile: number }
+  | { type: 'healed'; p: FactionId; units: { army: number; unit: number; by: 'city' | 'mammoth' }[] }
+  | { type: 'siege'; p: FactionId; city: number; rounds: number; needed: number }
+  | { type: 'cityCaptured'; p: FactionId; city: number; from: FactionId }
+  | { type: 'eliminated'; p: FactionId; reason: 'units' | 'cities' }
   | { type: 'turn'; p: FactionId; turn: number; income: Income }
-  | { type: 'victory'; p: FactionId; reason: 'last' | 'domination' };
+  | { type: 'victory'; p: FactionId };
 
 export interface Income {
-  troops: number;
   gold: number;
-  power: number;
-  regions: string[];
+  tiles: number;
+  cities: number;
+  enchanted: number;
 }

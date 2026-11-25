@@ -1,88 +1,87 @@
-# Juräa Frontiers – Regelwerk v2 (Entwurf)
+# Juräa Frontiers – Rules v2
 
-Stand: Rückfragen vom 25.11.2026 beantwortet. Noch nicht im Spiel umgesetzt; das Spiel läuft aktuell nach Regelwerk v1 (Risiko-Stil).
-Mit *Annahme* markierte Punkte sind meine Auslegung und noch nicht bestätigt.
+These are the rules the game implements. Points marked *(assumption)* were not specified and were decided during implementation; change them if you want something else.
 
-## Zugablauf
-- Freie Reihenfolge: rekrutieren, bauen, jede Armee beliebig bewegen und angreifen, dann „Zug beenden“.
-- Jede Einheit hat **3 Bewegungspunkte** pro Runde.
-- Ein Feld betreten kostet: Ebene 1, Wüste 1, Wald 2, Berg 3. Steht dort schon eine verbündete Armee: −1 (mindestens 1).
-- **Angreifen kostet 1 Bewegung.** Pro Runde höchstens **ein Angriff** je Armee (ein Schlagabtausch), egal wie viel Bewegung übrig ist.
-- Erst angreifen und danach weiterziehen ist erlaubt, wenn noch Bewegung übrig ist.
-- Wer einen Gegner vernichtet, aber keine Bewegung mehr hat, zieht nicht auf das Feld.
-- Ein Feld gehört immer dem Spieler, der zuletzt darauf stand. Armeen dürfen ein Feld komplett verlassen.
+## Turn
+- Free order: recruit, build, move and attack with each army in any order, then **End turn**.
+- Every army has **3 movement points** per turn.
+- Entering a hex costs: plains 1, desert 1, forest 2, mountains 3. If a friendly army stands there: −1 (minimum 1).
+- **Attacking costs 1 movement.** Each army may attack **once per turn** (one exchange), however much movement is left.
+- Attacking first and moving afterwards is allowed if movement is left.
+- An army that destroys an enemy but has no movement left does not move onto the hex.
+- A hex belongs to whoever stood on it last. Armies may leave a hex empty.
 
-## Armeen
-- Eine Armee ist eine Gruppe von Einheiten und wird als Ganzes bewegt. Es gibt keine Größengrenze.
-- Auf einem Feld dürfen höchstens **2 Armeen** desselben Spielers stehen.
-- **Teilen**: Eine Armee kann auf ihrem Feld in zwei Armeen geteilt werden. Das geht nur, wenn dort noch keine zweite Armee steht.
-- **Zusammenführen**: Stehen zwei Armeen auf einem Feld, wird der Teilen-Button zum Zusammenführen-Button. Die vereinte Armee hat die **geringere** Restbewegung.
-- Wird ein Feld mit zwei Armeen angegriffen, kämpfen beide als eine.
+## Armies
+- An army is a group of units and moves as one. There is no size limit.
+- At most **2 armies** of the same player per hex.
+- **Split**: an army can split into two on its hex, only if no second army stands there.
+- **Merge**: with two armies on one hex the Split button becomes Merge. The merged army keeps the **lower** remaining movement *(assumption: and counts as having attacked if either had)*.
+- If a hex with two armies is attacked, both fight as one.
 
-## Kampf
-1. Jede angreifende Einheit würfelt **1 W6 + Angriffswert**.
-2. Jede verteidigende Einheit würfelt **1 W6 + Verteidigungswert + Geländebonus**.
-3. Beide Seiten sortieren ihre Ergebnisse absteigend und vergleichen paarweise (höchster gegen höchsten …).
-   - Angriff > Verteidigung: der Verteidiger erhält 1 Treffer.
-   - Angriff ≤ Verteidigung: der Angreifer erhält 1 Treffer.
-   - **Überzählige Würfel verfallen** (wie bei Risiko).
-4. Treffer ziehen HP ab: zuerst bei Stufe 1, dann Stufe 2, dann Stufe 3.
-5. Ein Angriff ist genau **ein** Schlagabtausch.
+## Combat
+1. Every attacking unit rolls **1d6 + attack**.
+2. Every defending unit rolls **1d6 + defence + terrain bonus**.
+3. Both sides sort their results highest first and compare in pairs (highest against highest, …).
+   - Attack > defence: the defender takes 1 hit.
+   - Attack ≤ defence: the attacker takes 1 hit.
+   - **Spare dice are lost** (as in Risk).
+4. Hits remove HP from the weakest units first: tier 1, then tier 2, then tier 3 *(assumption: within a tier, the most wounded first)*.
+5. One attack is exactly **one** exchange.
 
-**Geländebonus (Verteidigung):** Berg +2, Wald +1, Ebene und Wüste +0.
+**Terrain defence:** mountains +2, forest +1, plains and desert +0.
 
-**HP:** Schaden bleibt nach dem Kampf bestehen. Einheiten neben einer eigenen Stadt heilen am Rundenbeginn 1 HP.
+**HP:** damage stays after the fight. Units next to one of their own cities heal 1 HP at the start of their turn.
 
-## Wirtschaft und Städte
-- Bezahlt wird **nur mit Gold** aus den Feldern. Seelen, Mana und Erz entfallen.
-- Einheitenkosten: Stufe 1 = **3**, Stufe 2 = **6**, Stufe 3 = **9** Gold. **Giants zahlen doppelt**.
-- **Rekrutieren** geht nur in Städten. Die Einheit erscheint in der Stadt und muss **im selben Zug** heraus. In Städten dürfen keine Einheiten stehen bleiben.
-- **Stadt bauen**: Eine Armee auf einem eigenen Feld gibt den Bauauftrag. Mindestens 2 Felder Abstand zur nächsten Stadt. Bauzeit 2 Züge. Kosten wie 3 Basiseinheiten (*Annahme*: der eigenen Fraktion, also 9 bzw. 18 Gold bei Giants).
-- **Stadt ausbauen**: Kosten wie 2 Basiseinheiten, Bauzeit 1 Zug. Jede Ausbaustufe verlängert die Belagerungszeit um 1 Runde.
-- **Belagerung**: Eine Stadt wird erobert, wenn feindliche Armeen insgesamt **3 Runden** (plus Ausbaustufen) neben ihr stehen.
-  - Der Zähler läuft weiter, solange irgendeine feindliche Armee neben der Stadt steht.
-  - Zieht die letzte belagernde Armee ab oder wird sie vernichtet, ist die Belagerung vorbei.
-  - Eroberte Städte gehören dem Eroberer.
+## Gold, cities and sieges
+- Everything is paid in **gold**. Income per turn: **+1 per plains hex** held and **+2 per city** *(assumption)*.
+- Unit costs: tier 1 = **3**, tier 2 = **6**, tier 3 = **9** gold. **Giants pay double.**
+- **Recruiting** only happens in cities. Recruits appear inside the city and must march out **the same turn**. Units cannot stand in cities. *(Assumption: recruits that cannot leave because every neighbouring hex is blocked disband at the end of the turn; recruiting is refused when no exit is free.)*
+- **Building a city**: an army on your own hex gives the order. Cost: 3 base units of your faction (9 gold, 18 for the Giants). Ready after 2 turns. *(Assumption: at least 2 hexes between cities, i.e. a distance of 3 or more.)*
+- **Upgrading a city**: costs 2 base units, takes 1 turn, max. level 3. Each level adds 1 round to sieges.
+- **Siege**: a city is captured once enemy armies have stood next to it for **3 rounds** (+1 per upgrade level).
+  - Counted at the start of the besieger's turn.
+  - The count continues as long as any army of that faction stands next to the city.
+  - If the last besieging army leaves or is destroyed, the siege ends.
+  - Captured cities belong to the conqueror.
 
-## Sieg
-- Wer **alle gegnerischen Einheiten vernichtet**, gewinnt.
-- Ein Spieler verliert, wenn er **3 Runden ohne Stadt** ist. Kann er in der verbleibenden Zeit rechnerisch keine Stadt mehr bauen oder erobern, verliert er sofort.
+## Victory
+- A faction is out when it has **no units** left and cannot recruit any (no city or not enough gold) *(assumption: a faction with a city and gold can still rebuild)*.
+- A faction is out after **3 rounds without a city**, or as soon as it can no longer get a city in time (no building site will finish, no siege will succeed, and it cannot afford and place a new city).
+- The last faction standing wins.
 
 ## Start
-- Jede Fraktion beginnt mit 1 Stadt und einer Armee daneben: 3 Basiseinheiten und 1 Stufe-2-Einheit. Dazu etwas Startgold.
-- Etwa jedes 4. Feld (zufällig verteilt) hat eine neutrale Armee aus **1–3 Wildlingen** (Angriff +0, Verteidigung +1, 1 HP), im Gebirge 1 mehr. Neutrale greifen nie an.
+- Each faction starts with 1 city (its capital) and an army next to it: 3 base units and 1 tier-2 unit, plus gold for 2 base units.
+- About every 4th hex (random, not next to a capital) holds a neutral army of **1–3 Wildlings** (attack +0, defence +1, 1 HP), one more in the mountains. Neutrals never attack.
 
-## Fraktionen
+## Factions
 
-### Necros (Death Cults)
-**Passiv:** Nach jedem Kampf würfeln sie für jede gestorbene Einheit (Freund oder Feind) 1 W6. Jede 6 erweckt ein Skelett in ihrer am Kampf beteiligten Armee. Es werden nie mehr Skelette erweckt, als Einheiten gestorben sind.
+### Death Cults (Necromancers)
+**Passive:** after every fight they take part in, they roll 1d6 for each unit that died (friend or foe). Every 6 raises a skeleton in their army. Never more skeletons than units died.
 
-| Stufe | Einheit | Angriff | Verteidigung | HP | Besonderes |
+| Tier | Unit | Attack | Defence | HP | Special |
 |---|---|---|---|---|---|
-| 1 | Skelett | +0 | +0 | 1 | |
-| 2 | Lich (untoter Magier) | +3 | +0 | 1 | |
-| 3 | Death Priest (untoter Bischof) | +1 | +1 | 2 | +3 Erweckungswürfe pro Priester in diesem Kampf. Sind weniger als 3 Einheiten gestorben, nur 1 Zusatzwurf pro gefallener Einheit. Eigener Würfellook. |
+| 1 | Skeleton | +0 | +0 | 1 | |
+| 2 | Lich (undead mage) | +3 | +0 | 1 | |
+| 3 | Death Priest (undead bishop) | +1 | +1 | 2 | +3 raising rolls per priest in the fight; if fewer than 3 units died, 1 extra roll per fallen unit. Rolls with bone dice. |
 
-### Elfen (Evergarden)
-**Passiv:** Auf eroberten Feldern wächst immer Wald. Im Wald +1 Verteidigung.
+### Evergarden (Elves)
+**Passive:** forest grows on every plains or desert hex they claim *(assumption: mountains stay mountains)*. +1 defence in forests.
 
-| Stufe | Einheit | Angriff | Verteidigung | HP | Besonderes |
+| Tier | Unit | Attack | Defence | HP | Special |
 |---|---|---|---|---|---|
-| 1 | Bogenschütze | +1 | +1 | 1 | |
-| 2 | Druide (Magier mit Holzstab) | +1 | +1 | 2 | Verzaubert pro Runde das Waldfeld, auf dem er steht. Kostet keine Bewegung. Verzauberter Wald gibt +1 Verteidigung; je 3 verzauberte Wälder +1 Gold pro Runde. Wird das Feld erobert, geht der Zauber verloren, der Wald bleibt. |
-| 3 | Treant (Baumriese) | +2 | +4 | 2 | |
+| 1 | Elven Archer | +1 | +1 | 1 | |
+| 2 | Druid (mage with a wooden staff) | +1 | +1 | 2 | Enchants the forest its army stands on (no movement cost). Enchanted forests give elves +1 defence; every 3 enchanted forests give +1 gold per turn. Lost when the hex is captured; the forest stays. |
+| 3 | Treant (tree giant) | +2 | +4 | 2 | |
 
 ### Giants
-**Passiv:** Stärkere Einheiten, aber doppelte Kosten.
+**Passive:** stronger units, but everything costs twice as much.
 
-| Stufe | Einheit | Angriff | Verteidigung | HP | Besonderes |
+| Tier | Unit | Attack | Defence | HP | Special |
 |---|---|---|---|---|---|
-| 1 | Iron Gut (Riese mit großer Keule) | +2 | +1 | 2 | |
-| 2 | Lead Belcher (Riese mit Schiffskanone) | +2 | +1 | 2 | Bei einer 6 darf er nochmal würfeln: ab 4+ verliert die schwächste gegnerische Einheit 1 HP, bevor der Kampf ausgewertet wird. Bei einer weiteren 6 darf er erneut würfeln (Kettenreaktion). |
-| 3 | Mammut | +2 | +4 | 2 | Zu Rundenbeginn heilt jedes Mammut 1 HP bei der besten verletzten Einheit seiner Armee (keine Mammuts). |
+| 1 | Iron Gut (giant with a huge club) | +2 | +1 | 2 | |
+| 2 | Lead Belcher (giant with a ship's cannon) | +2 | +1 | 2 | On a natural 6 he fires again: 4+ wounds the weakest enemy before the exchange (a unit killed this way loses its die). Another 6 fires once more. The first 6 still counts normally *(assumption)*. |
+| 3 | Mammoth | +2 | +4 | 2 | At the start of its turn each mammoth heals 1 HP on the best wounded non-mammoth unit in its army. |
 
-## Offene Punkte (*Annahmen* bis zur Klärung)
-- Lead Belcher: Zählt die erste 6 trotzdem normal im Kampf? *Annahme: ja.*
-- Necro-Erweckung bei Kämpfen zwischen Fremden: Nur Kämpfe, an denen Necros beteiligt sind. *Annahme.*
-- Elfen-Wald bei Eroberung von Bergen: Wird aus einem Berg auch Wald? *Annahme: nur Ebene und Wüste werden Wald.*
-- Gold-Einkommen pro Feld: *Annahme: wie bisher 1 Gold pro Ebene, +2 pro Stadt.*
+## Balance notes
+- In AI-only test games (15 games), 13 finish within 80 rounds, about 46 rounds on average; large maps take longest.
+- Necromancers currently win least often against the AI. Needs human playtesting.

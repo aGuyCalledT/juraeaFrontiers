@@ -194,6 +194,20 @@ export const SYMBOLS = `
   <path d="M84 96 L84 40" stroke="#6b3f1f" stroke-width="6" stroke-linecap="round"/>
   <circle cx="84" cy="36" r="6" fill="#ffb02e" ${S4}/>
 </symbol>
+<symbol id="s-scaffold" viewBox="0 0 100 100">
+  <path d="M14 94 L14 40 M86 94 L86 40 M14 40 L86 40 M14 66 L86 66 M14 40 L86 94 M86 40 L14 94" stroke="${INK}" stroke-width="9" stroke-linecap="round"/>
+  <path d="M14 94 L14 40 M86 94 L86 40 M14 40 L86 40 M14 66 L86 66 M14 40 L86 94 M86 40 L14 94" stroke="#c98f52" stroke-width="4" stroke-linecap="round"/>
+  <path d="M30 94 L30 76 L70 76 L70 94 Z" fill="#b3a998" ${S4}/>
+  <path d="M30 84 L70 84 M50 76 L50 84" stroke="#7d7466" stroke-width="3"/>
+  <path d="M50 40 L50 12" stroke="${INK}" stroke-width="5" stroke-linecap="round"/>
+  <path d="M51 12 L72 18 L51 25 Z" fill="currentColor" ${S4}/>
+</symbol>
+<symbol id="s-star" viewBox="0 0 100 100">
+  <path d="M50 8 L62 38 L94 40 L69 60 L78 92 L50 74 L22 92 L31 60 L6 40 L38 38 Z" fill="#ffd23f" ${S}/>
+</symbol>
+<symbol id="s-sparkle" viewBox="0 0 100 100">
+  <path d="M50 10 Q56 44 90 50 Q56 56 50 90 Q44 56 10 50 Q44 44 50 10 Z" fill="#d8ffb0" ${S4}/>
+</symbol>
 <symbol id="s-shield" viewBox="0 0 100 100">
   <path d="M50 4 L92 16 Q92 66 50 96 Q8 66 8 16 Z" fill="currentColor" ${S}/>
 </symbol>
@@ -216,11 +230,10 @@ function rand(seed: number) {
 type Item = [string, number, number, number];
 
 /** Decorations in tile-local coordinates (hex centre at 0,0, size 60). */
-export function decorations(t: Tile): string {
+export function decorations(t: Tile, hasBuilding = false): string {
   const r = rand(t.deco + (t.terrain.charCodeAt(0) << 8));
   const items: Item[] = [];
   const j = (v: number) => v + (r() - 0.5) * 6;
-  const hasBuilding = !!t.capital;
   switch (t.terrain) {
     case 'forest': {
       const slots: [number, number][] = [[-24, -24], [6, -34], [30, -14], [-38, 0], [-4, -8], [24, 8], [34, -36]];

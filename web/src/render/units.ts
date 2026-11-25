@@ -7,11 +7,9 @@
 //   .u-fx      hidden effect shown on attack (flash, spell, arrow)
 // Faction trim uses currentColor.
 
-export type UnitId =
-  | 'skeleton' | 'lich' | 'priest'
-  | 'archer' | 'druid' | 'treant'
-  | 'irongut' | 'belcher' | 'mammoth'
-  | 'wildling';
+import { UNIT_STATS, type UnitType } from '../engine/unitstats';
+
+export type UnitId = UnitType;
 
 export type AttackStyle = 'swing' | 'cast' | 'shoot' | 'cannon' | 'stomp';
 
@@ -409,27 +407,42 @@ ${shadow(20)}
   </g>
 </g>`;
 
-export const UNITS: Record<UnitId, UnitSprite> = {
-  skeleton: { id: 'skeleton', name: 'Skelett', faction: 'necro', tier: 1, attack: 0, defense: 0, hp: 1, style: 'swing', art: skeleton },
-  lich: { id: 'lich', name: 'Lich', faction: 'necro', tier: 2, attack: 3, defense: 0, hp: 1, style: 'cast', art: lich },
-  priest: { id: 'priest', name: 'Death Priest', faction: 'necro', tier: 3, attack: 1, defense: 1, hp: 2, style: 'cast', art: priest },
-  archer: { id: 'archer', name: 'Elfen-Bogenschütze', faction: 'elves', tier: 1, attack: 1, defense: 1, hp: 1, style: 'shoot', art: archer },
-  druid: { id: 'druid', name: 'Druide', faction: 'elves', tier: 2, attack: 1, defense: 1, hp: 2, style: 'cast', art: druid },
-  treant: { id: 'treant', name: 'Treant', faction: 'elves', tier: 3, attack: 2, defense: 4, hp: 2, style: 'swing', art: treant },
-  irongut: { id: 'irongut', name: 'Iron Gut', faction: 'giants', tier: 1, attack: 2, defense: 1, hp: 2, style: 'swing', art: irongut },
-  belcher: { id: 'belcher', name: 'Lead Belcher', faction: 'giants', tier: 2, attack: 2, defense: 1, hp: 2, style: 'cannon', art: belcher },
-  mammoth: { id: 'mammoth', name: 'Mammut', faction: 'giants', tier: 3, attack: 2, defense: 4, hp: 2, style: 'stomp', art: mammoth },
-  wildling: { id: 'wildling', name: 'Wildling', faction: 'neutral', tier: 1, attack: 0, defense: 1, hp: 1, style: 'swing', art: wildling },
+const ART: Record<UnitId, string> = { skeleton, lich, priest, archer, druid, treant, irongut, belcher, mammoth, wildling };
+const STYLE: Record<UnitId, AttackStyle> = {
+  skeleton: 'swing', lich: 'cast', priest: 'cast', archer: 'shoot', druid: 'cast', treant: 'swing',
+  irongut: 'swing', belcher: 'cannon', mammoth: 'stomp', wildling: 'swing',
 };
+/** Size relative to the 120px box. Giants tower over everyone, the mammoth most of all. */
+export const UNIT_SCALE: Record<UnitId, number> = {
+  skeleton: 0.74, lich: 0.8, priest: 0.84, archer: 0.74, druid: 0.8, treant: 1.0,
+  irongut: 1.08, belcher: 1.1, mammoth: 1.32, wildling: 0.74,
+};
+
+const scaled = (id: UnitId) => {
+  const k = UNIT_SCALE[id];
+  return `<g transform="translate(60 112) scale(${k}) translate(-60 -112)">${ART[id]}</g>`;
+};
+
+export const UNITS: Record<UnitId, UnitSprite> = Object.fromEntries(
+  (Object.keys(ART) as UnitId[]).map((id) => {
+    const st = UNIT_STATS[id];
+    return [id, { id, name: st.name, faction: st.faction, tier: st.tier, attack: st.attack, defense: st.defense, hp: st.hp, style: STYLE[id], art: scaled(id) }];
+  }),
+) as Record<UnitId, UnitSprite>;
 
 export const UNIT_ORDER: UnitId[] = ['skeleton', 'lich', 'priest', 'archer', 'druid', 'treant', 'irongut', 'belcher', 'mammoth', 'wildling'];
 
-const TRIM: Record<UnitSprite['faction'], string> = { necro: '#8e4fc4', elves: '#f0b928', giants: '#e0452f', neutral: '#b9a88f' };
+export const TRIM: Record<UnitSprite['faction'], string> = { necro: '#8e4fc4', elves: '#f0b928', giants: '#e0452f', neutral: '#b9a88f' };
 
 /** Standalone <svg> for a unit. */
 export function unitSvg(id: UnitId, cls = ''): string {
   const u = UNITS[id];
   return `<svg class="sprite s-${u.style} ${cls}" data-unit="${id}" viewBox="0 0 120 120" style="color:${TRIM[u.faction]}" role="img" aria-label="${u.name}">${u.art}</svg>`;
+}
+
+/** <symbol> definitions for the map (static, no animation). */
+export function unitSymbols(): string {
+  return UNIT_ORDER.map((id) => `<symbol id="unit-${id}" viewBox="0 0 120 120" overflow="visible">${UNITS[id].art}</symbol>`).join('');
 }
 
 /** Plays an animation on a sprite element. Resolves when it ends. */

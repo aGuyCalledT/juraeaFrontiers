@@ -7,6 +7,8 @@ or online with friends.
 ## Play without installing anything
 
 Open `play/juraea-frontiers.html` (repo root) in a browser by double-clicking it.
+`play/units.html` shows every unit sprite with its animations
+(regenerate with `npx tsx scripts/build-preview.ts`). The rules are in `RULES.md`.
 Everything is inside that one file. Online play needs the relay server; AI and
 hotseat games work offline. Rebuild it after code changes with
 `npm run build:single`.
@@ -63,12 +65,12 @@ browser plays the AI factions; if the host drops, another player takes over.
 | Path | What |
 | --- | --- |
 | `src/engine/` | Rules, map generator (port of `MapGenerator.java`), AI, seeded RNG. No DOM. |
-| `src/render/` | SVG board (camera, picking), cartoon art symbols, animations. |
+| `src/render/` | SVG board (camera, picking), cartoon art, unit sprites (`units.ts`), animations. |
 | `src/game/controller.ts` | Turn flow, input, HUD, event animations, saving. |
 | `src/ui/` | Dice tray, icons. |
 | `src/net/` | Online client. |
-| `scripts/simulate.ts` | `npm test`: runs AI-vs-AI games to check every game finishes. |
+| `scripts/simulate.ts` | `npm test`: runs AI-vs-AI games and reports winners and game length. |
 
 Faction names, units and terrain come from the Java prototype in `src/main`.
-Balance knobs (costs, ability strength) live in `src/engine/factions.ts` and
-`src/engine/rules.ts`.
+Balance knobs live in `src/engine/unitstats.ts` (unit stats, costs) and
+`src/engine/rules.ts` (terrain, income, sieges).

@@ -1,6 +1,7 @@
 import { DIRS, hexDistance, key } from './hex';
 import { Rng } from './rng';
-import type { FactionId, GameSetup, Region, Terrain, Tile } from './types';
+import type { Army, City, FactionId, GameSetup, Region, Terrain, Tile } from './types';
+import { FACTION_UNITS, UNIT_STATS, MOVE_POINTS } from './unitstats';
 
 const RADIUS = { small: 4, medium: 5, large: 6 } as const;
 
@@ -15,6 +16,9 @@ export interface MapData {
   tiles: Tile[];
   regions: Region[];
   neighbors: number[][];
+  armies: Army[];
+  cities: City[];
+  nextId: number;
 }
 
 export function buildNeighbors(tiles: Tile[]): number[][] {
@@ -34,8 +38,7 @@ export function generateMap(setup: GameSetup): MapData {
     const r2 = Math.min(radius, -q + radius);
     for (let r = r1; r <= r2; r++) {
       tiles.push({
-        id: tiles.length, q, r, terrain: 'water', region: -1, owner: null, troops: 0,
-        champion: false, stronghold: false, capital: null, deco: rng.int(1 << 30),
+        id: tiles.length, q, r, terrain: 'water', region: -1, owner: null, enchanted: false, deco: rng.int(1 << 30),
       });
     }
   }
@@ -143,7 +146,7 @@ export function generateMap(setup: GameSetup): MapData {
   const names = rng.shuffle([...REGION_NAMES]);
   const regions: Region[] = seeds.map((_, i) => {
     const ids = land.filter((t) => t.region === i).map((t) => t.id);
-    return { id: i, name: names[i], tiles: ids, bonus: Math.max(1, Math.round(ids.length / 3.5)) };
+    return { id: i, name: names[i], tiles: ids };
   });
 
   // 4. Starting positions: spread capitals as far apart as possible.
@@ -161,28 +164,50 @@ export function generateMap(setup: GameSetup): MapData {
     if (score > bestScore) { bestScore = score; bestSet = set; }
   }
 
-  for (const t of land) {
-    t.owner = 'neutral';
-    t.troops = 2 + (t.terrain === 'mountain' ? 1 : 0) + (rng.int(3) === 0 ? 1 : 0);
-  }
+  let nextId = 1;
+  const armies: Army[] = [];
+  const cities: City[] = [];
+  const mkArmy = (owner: Army['owner'], tile: number, types: string[]): Army => {
+    const a: Army = {
+      id: nextId++, owner, tile, mp: MOVE_POINTS, attacked: false,
+      units: types.map((t) => ({ id: nextId++, type: t as Army['units'][0]['type'], hp: UNIT_STATS[t as keyof typeof UNIT_STATS].hp })),
+    };
+    armies.push(a);
+    return a;
+  };
+  const homes: number[] = [];
   bestSet.forEach((cap, i) => {
     const f: FactionId = active[i];
     if (cap.terrain === 'water') return;
     cap.terrain = cap.terrain === 'mountain' ? 'plains' : cap.terrain;
     cap.owner = f;
-    cap.capital = f;
-    cap.troops = 6;
-    const around = rng.shuffle(nb[cap.id].map((x) => tiles[x]).filter((x) => x.terrain !== 'water' && !x.capital));
-    around.slice(0, 2).forEach((a) => { a.owner = f; a.troops = 3; });
-    // Make sure each faction has a little of its power terrain nearby.
+    cities.push({ tile: cap.id, owner: f, level: 0, siege: {}, capital: true });
+    homes.push(cap.id);
+    // Starting army next to the capital: 3 base units and 1 tier-2 unit.
+    const spot = rng.shuffle(nb[cap.id].map((x) => tiles[x]).filter((x) => x.terrain !== 'water'))
+      .sort((a, b) => (a.terrain === 'mountain' ? 1 : 0) - (b.terrain === 'mountain' ? 1 : 0))[0];
+    if (spot) {
+      spot.owner = f;
+      const [t1, t2] = FACTION_UNITS[f];
+      mkArmy(f, spot.id, [t1, t1, t1, t2]);
+    }
+    // Make sure each faction has a little of its home terrain nearby.
     const home = FACTION_TERRAIN[f];
     const ring = land
-      .filter((x) => x.owner === 'neutral' && hexDistance(x.q, x.r, cap.q, cap.r) <= 2)
+      .filter((x) => x.owner === null && hexDistance(x.q, x.r, cap.q, cap.r) <= 2)
       .sort((a, b) => a.deco - b.deco);
     if (ring.length && !ring.some((x) => x.terrain === home)) ring[0].terrain = home;
   });
 
-  return { radius, tiles, regions, neighbors: nb };
+  // Neutral wildlings on roughly every fourth free hex, away from the capitals.
+  const free = rng.shuffle(land.filter((t) => t.owner === null && homes.every((h) => hexDistance(tiles[h].q, tiles[h].r, t.q, t.r) >= 2)));
+  free.slice(0, Math.round(land.length / 4)).forEach((t) => {
+    t.owner = 'neutral';
+    const n = 1 + rng.int(3) + (t.terrain === 'mountain' ? 1 : 0);
+    mkArmy('neutral', t.id, Array(n).fill('wildling'));
+  });
+
+  return { radius, tiles, regions, neighbors: nb, armies, cities, nextId };
 }
 
 const FACTION_TERRAIN: Record<FactionId, Terrain> = { necro: 'desert', elves: 'forest', giants: 'mountain' };

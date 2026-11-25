@@ -122,6 +122,19 @@ export function showAim(board: Board, from: number, to: number | null, kind: 'at
   layer.innerHTML = `<g class="aim aim-${kind}"><path d="${d}" stroke="${INK}" stroke-width="17" fill="none" stroke-linecap="round" opacity="0.35" transform="translate(0 10)"/><path d="${d}" stroke="${INK}" stroke-width="16" fill="none" stroke-linecap="round"/><path d="${d}" stroke="#fff4dc" stroke-width="10" fill="none" stroke-linecap="round"/><path class="aim-dash" d="${d}" stroke="${color}" stroke-width="8" fill="none" stroke-linecap="round" stroke-dasharray="14 12"/><polygon points="${head.map((p) => p.join(',')).join(' ')}" fill="${color}" stroke="${INK}" stroke-width="4" stroke-linejoin="round"/></g>`;
 }
 
+/** Dotted marching route with a movement-cost flag at the end. */
+export function showPath(board: Board, from: number, path: number[], cost: number, left: number) {
+  const layer = board.arrowLayer;
+  if (!path.length) { layer.replaceChildren(); return; }
+  const pts = [from, ...path].map((id) => board.center(id));
+  const d = pts.map((p, i) => `${i ? 'L' : 'M'}${p.x.toFixed(1)} ${(p.y - 6).toFixed(1)}`).join(' ');
+  const end = pts[pts.length - 1];
+  layer.innerHTML = `<g class="aim aim-move"><path d="${d}" stroke="${INK}" stroke-width="13" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+    <path class="aim-dash" d="${d}" stroke="#fff4dc" stroke-width="6" fill="none" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="2 12"/>
+    <g transform="translate(${end.x.toFixed(1)} ${(end.y - 44).toFixed(1)})"><rect x="-26" y="-15" width="52" height="28" rx="9" fill="${left > 0 ? '#7fdc52' : '#ffd23f'}" stroke="${INK}" stroke-width="3"/>
+    <text class="badge-text small" y="6" text-anchor="middle">${cost} MP</text></g></g>`;
+}
+
 export function clearAim(board: Board) {
   board.arrowLayer.replaceChildren();
 }
@@ -230,33 +243,35 @@ export function placed(board: Board, id: number, n: number) {
   floatText(board, id, `+${n}`, 'gain');
   const v = board.view(id);
   if (!v) return;
-  anim(v.units, [{ transform: 'translateY(-26px)', opacity: 0.2 }, { transform: 'translateY(2px)', opacity: 1, offset: 0.7 }, { transform: 'translateY(0)' }], { duration: 420, easing: BOUNCE });
+  anim(v.badgeIn, [{ transform: 'translateY(-26px)', opacity: 0.2 }, { transform: 'translateY(2px)', opacity: 1, offset: 0.7 }, { transform: 'translateY(0)' }], { duration: 420, easing: BOUNCE });
 }
 
-export async function march(board: Board, from: number, to: number, f: FactionId, n: number) {
-  const a = board.center(from);
-  const b = board.center(to);
-  if (!motion.reduced) {
-    const g = document.createElementNS(NS, 'g');
-    g.innerHTML = use(`u-${f}`, 0, 12, 34, `style="color:${FACTIONS[f].color}"`);
-    board.fxLayer.appendChild(g);
-    const an = anim(g, [
-      { transform: `translate(${a.x}px, ${a.y}px)` },
-      { transform: `translate(${(a.x + b.x) / 2}px, ${(a.y + b.y) / 2 - 24}px)`, offset: 0.5 },
-      { transform: `translate(${b.x}px, ${b.y}px)` },
-    ], { duration: 460, easing: 'ease-in-out' });
-    await done(an);
-    g.remove();
+/** An army token hops hex by hex along its path. */
+export async function marchPath(board: Board, from: number, path: number[], unit: string, owner: Owner) {
+  if (motion.reduced || !path.length) return;
+  const g = document.createElementNS(NS, 'g');
+  const col = !owner || owner === 'neutral' ? NEUTRAL.color : FACTIONS[owner].color;
+  g.innerHTML = `<ellipse cx="0" cy="34" rx="20" ry="5" fill="#000" opacity=".2"/>${use(`unit-${unit}`, 0, 34, 54, `style="color:${col}"`)}`;
+  board.fxLayer.appendChild(g);
+  let at = board.center(from);
+  for (const t of path) {
+    const to = board.center(t);
+    const a = anim(g, [
+      { transform: `translate(${at.x}px, ${at.y}px)` },
+      { transform: `translate(${(at.x + to.x) / 2}px, ${(at.y + to.y) / 2 - 22}px) scale(1.04, .96)`, offset: 0.5 },
+      { transform: `translate(${to.x}px, ${to.y}px)` },
+    ], { duration: 260, easing: 'ease-in-out', fill: 'forwards' });
+    await done(a);
+    at = to;
   }
-  popBadge(board, to);
-  floatText(board, to, `+${n}`, 'gain');
+  g.remove();
 }
 
-/** Faction ability scenes. */
-export async function abilityScene(board: Board, id: number, f: FactionId, screen: HTMLElement) {
+/** Special scenes: raising the dead, enchanting a forest, building. */
+export async function abilityScene(board: Board, id: number, kind: 'raise' | 'enchant' | 'build', screen: HTMLElement) {
   const c = board.center(id);
   const v = board.view(id);
-  if (f === 'necro') {
+  if (kind === 'raise') {
     for (let i = 0; i < 10; i++) {
       const g = document.createElementNS(NS, 'g');
       g.innerHTML = `<path d="M-8 10 Q-10 -6 0 -14 Q10 -6 8 10 L4 6 L0 10 L-4 6 Z" fill="#8dff5a" stroke="${INK}" stroke-width="2.4" stroke-linejoin="round"/><circle cx="-3" cy="-4" r="1.8" fill="${INK}"/><circle cx="3" cy="-4" r="1.8" fill="${INK}"/>`;
@@ -272,7 +287,7 @@ export async function abilityScene(board: Board, id: number, f: FactionId, scree
     }
     if (v) anim(v.top, [{ filter: 'brightness(1)' }, { filter: 'brightness(0.6) saturate(1.6)' }, { filter: 'brightness(1)' }], { duration: 900 });
     await wait(500);
-  } else if (f === 'elves') {
+  } else if (kind === 'enchant') {
     if (v) anim(v.deco, [{ transform: 'scale(0)', opacity: 0 }, { transform: 'scale(1.15)', opacity: 1, offset: 0.7 }, { transform: 'scale(1)' }], { duration: 700, easing: BOUNCE });
     for (let i = 0; i < 14; i++) {
       const leaf = document.createElementNS(NS, 'path');
@@ -290,7 +305,7 @@ export async function abilityScene(board: Board, id: number, f: FactionId, scree
     }
     await wait(500);
   } else {
-    const sh = v?.build.querySelector('use[href="#s-stronghold"]');
+    const sh = v?.build.querySelector('use[href="#s-scaffold"], use[href^="#s-castle"]');
     if (sh) anim(sh, [{ transform: 'translateY(-140px)', opacity: 0 }, { transform: 'translateY(0)', opacity: 1, offset: 0.55 }, { transform: 'translateY(-10px)', offset: 0.75 }, { transform: 'translateY(0)' }], { duration: 700, easing: 'cubic-bezier(.5,0,.75,0)' });
     await wait(380);
     shakeScreen(screen, 1.2);

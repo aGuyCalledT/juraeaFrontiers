@@ -3,6 +3,7 @@ import '@fontsource/fredoka/latin-400.css';
 import '@fontsource/fredoka/latin-500.css';
 import '@fontsource/fredoka/latin-600.css';
 import './styles.css';
+import './render/units.css';
 import { sfx } from './audio';
 import { FACTIONS, FACTION_ORDER } from './engine/factions';
 import { applyAction, createGame } from './engine/rules';
@@ -10,15 +11,17 @@ import type { FactionId, GameSetup, GameState, SlotKind } from './engine/types';
 import { GameController, crest } from './game/controller';
 import { Online, defaultServerUrl, type LobbySlot, type RoomInfo, type ServerMsg } from './net/online';
 import { SYMBOLS } from './render/art';
+import { unitSymbols, unitSvg } from './render/units';
+import { FACTION_UNITS, UNIT_STATS, unitCost } from './engine/unitstats';
 import { Board } from './render/board';
 import * as fx from './render/fx';
 import { ICONS } from './ui/icons';
 
 const app = document.getElementById('app')!;
 const sprite = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
-sprite.setAttribute('class', 'sprite');
+sprite.setAttribute('class', 'svg-defs');
 sprite.setAttribute('aria-hidden', 'true');
-sprite.innerHTML = SYMBOLS;
+sprite.innerHTML = SYMBOLS + unitSymbols();
 document.body.prepend(sprite);
 
 try { const sp = Number(localStorage.getItem('jf-speed')); if (sp) fx.motion.speed = sp; } catch { /* storage unavailable */ }
@@ -36,7 +39,7 @@ function loadSave(): GameState | null {
     const raw = localStorage.getItem('jf-save');
     if (!raw) return null;
     const s = JSON.parse(raw) as GameState;
-    return s.version === 1 && s.phase !== 'over' ? s : null;
+    return s.version === 2 && s.phase !== 'over' ? s : null;
   } catch { return null; }
 }
 
@@ -116,14 +119,15 @@ function closePanel() {
 
 function factionCard(f: FactionId, controls: string) {
   const d = FACTIONS[f];
+  const units = FACTION_UNITS[f].map((u) => {
+    const st = UNIT_STATS[u];
+    return `<li title="${st.ability ?? ''}">${unitSvg(u)}<b>${st.name}</b><span>+${st.attack} / +${st.defense} · ${st.hp} HP · ${unitCost(u)} gold</span></li>`;
+  }).join('');
   return `<article class="fcard" data-f="${f}" style="--c:${d.color};--cd:${d.dark};--cl:${d.light}">
-    <div class="fcard-top">${crest(f, 'fcard-crest')}<div><h3>${d.name}</h3><span class="fcard-people">${d.people} · ${d.resource} from ${d.resourceTerrain === 'mountain' ? 'mountains' : d.resourceTerrain === 'forest' ? 'forests' : 'deserts'}</span></div></div>
+    <div class="fcard-top">${crest(f, 'fcard-crest')}<div><h3>${d.name}</h3><span class="fcard-people">${d.people}</span></div></div>
     <p class="fcard-quote">“${d.quote}”</p>
-    <dl class="fcard-rules">
-      <dt>${d.passive.name}</dt><dd>${d.passive.text}</dd>
-      <dt>${d.ability.name} <em>${d.ability.cost} ${d.resource}</em></dt><dd>${d.ability.text}</dd>
-    </dl>
-    <div class="fcard-units">${d.units.infantry} · ${d.units.cavalry} · ${d.units.special}</div>
+    <dl class="fcard-rules"><dt>${d.passive.name}</dt><dd>${d.passive.text}</dd></dl>
+    <ul class="fcard-roster">${units}</ul>
     <div class="fcard-ctl">${controls}</div>
   </article>`;
 }
@@ -186,12 +190,12 @@ function showHelp() {
   panel(`
     <h2>How to play</h2>
     <div class="help">
-      <section><h3>${ICONS.crown}Goal</h3><p>Capture every rival <b>capital</b> (the big castle). A faction that loses its capital is out, and its lands and gold go to the conqueror. Holding <b>75%</b> of the land also wins.</p></section>
-      <section><h3>${ICONS.troops}1 · Reinforce</h3><p>You get troops each turn: one per 3 hexes (at least 3), +1 for your capital, plus the bonus of every region you fully hold. Tap your hexes to place them. Spend gold on extra troops or a <b>champion</b>, who adds +1 to the best die on that hex.</p></section>
-      <section><h3>${ICONS.sword}2 · Attack</h3><p>Pick one of your hexes with 2+ troops, then an adjacent enemy or wild hex. You roll up to 3 dice, the defender up to 2 (3 in a capital or stronghold). Best dice are compared pairwise; ties go to the defender. Win the hex and you march in.</p></section>
-      <section><h3>${ICONS.march}3 · Fortify</h3><p>Once per turn, move troops between two of your hexes that are connected through your land. Then end the turn.</p></section>
-      <section><h3>${ICONS.dice}Terrain</h3><p><b>Plains</b> give gold. <b>Mountains</b> give defenders +1. <b>Forests</b> feed Evergarden’s Mana, <b>mountains</b> the Giants’ Ore and <b>deserts</b> the Death Cults’ Souls, which power each faction’s ability.</p></section>
-      <section><h3>${ICONS.gear}Controls</h3><p>Drag to pan, scroll or pinch to zoom. Long-press a hex on touch screens for details. Keys: <kbd>Space</kbd> next phase, <kbd>1</kbd> <kbd>5</kbd> <kbd>A</kbd> placing amount, <kbd>B</kbd> blitz, <kbd>F</kbd> fit map, <kbd>Esc</kbd> cancel.</p></section>
+      <section><h3>${ICONS.crown}Goal</h3><p>Destroy every enemy unit. A faction also falls after <b>3 rounds without a city</b>, or at once if it can no longer get one in time.</p></section>
+      <section><h3>${ICONS.march}Moving</h3><p>Each army has <b>3 movement</b> per turn. Plains and desert cost 1, forest 2, mountains 3; a hex with a friendly army costs 1 less. Armies may leave a hex empty: land belongs to whoever stood there last. Up to two armies can share a hex; <b>split</b> and <b>merge</b> them from the army panel.</p></section>
+      <section><h3>${ICONS.sword}Fighting</h3><p>Attacking an adjacent enemy costs 1 movement, once per army per turn. <b>Every unit rolls one die</b> and adds its attack (attackers) or defence plus terrain (defenders: forest +1, mountains +2). Both sides sort their results and compare highest against highest; the higher attacker wins, ties go to the defender. Spare dice are lost. Each loss costs the weakest unit 1 HP.</p></section>
+      <section><h3>${ICONS.home}Cities</h3><p>Recruit in your cities; recruits appear inside and must march out the same turn. Build a new city with an army on your land (2 turns, at least 2 hexes from other cities). Stand next to an enemy city for <b>3 rounds</b> to capture it; each upgrade adds a round. Wounded units heal next to their own cities.</p></section>
+      <section><h3>${ICONS.gold}Gold</h3><p>+1 per plains hex you hold and +2 per city. Units cost 3 / 6 / 9 by tier; the Giants pay double.</p></section>
+      <section><h3>${ICONS.gear}Controls</h3><p>Choose an army, then a hex to march to or an enemy to attack. Choose a city to recruit. Drag to pan, scroll or pinch to zoom, long-press for details. Keys: <kbd>Tab</kbd> next army, <kbd>Enter</kbd> end turn, <kbd>F</kbd> fit map, <kbd>Esc</kbd> cancel.</p></section>
     </div>`, 'wide');
 }
 
