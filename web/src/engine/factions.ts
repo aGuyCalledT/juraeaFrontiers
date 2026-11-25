@@ -27,7 +27,7 @@ export const FACTIONS: Record<FactionId, FactionDef> = {
     accent: '#8dff5a',
     passive: {
       name: 'Undead Army',
-      text: 'After every fight, each fallen unit (friend or foe) rolls a die: every 6 rises as a skeleton.',
+      text: 'After every fight, each fallen unit (friend or foe) rolls a die: every 5 or 6 rises as a skeleton.',
     },
   },
   elves: {

@@ -4,11 +4,11 @@ import { buildNeighbors, generateMap } from './mapgen';
 import { Rng } from './rng';
 import type {
   Action, Army, CannonShot, City, CombatDie, CombatEvent, CombatPair, FactionId, GameEvent, GameSetup, GameState,
-  Income, Owner, PlayerState, RaiseResult, Tile, Unit,
+  Income, Owner, PlayerState, PlayerStats, RaiseResult, Tile, Unit,
 } from './types';
 import {
   ARMY_FREE_SIZE, CITY_COST, DWARF_UNITS, FACTION_UNITS, IMPROVE_COST, MAX_CITY_LEVEL, MAX_IMPROVE, MOVE_POINTS, NO_CITY_LIMIT,
-  ENCHANTED_GOLD, SIEGE_ROUNDS, SPELL_COOLDOWN, START_GOLD, UNIT_STATS, UPGRADE_COST, WALL_HP, baseCost, bounty, refund, unitCost, type UnitType,
+  ENCHANTED_GOLD, SIEGE_ROUNDS, SPELL_COOLDOWN, START_GOLD, UNIT_STATS, UPGRADE_COST, DWARF_COST, DWARF_COST_OTHERS, RAISE, wallHp, baseCost, bounty, refund, unitCost, type UnitType,
 } from './unitstats';
 
 // ------------------------------------------------------------------ helpers
@@ -35,7 +35,16 @@ export function ownedTiles(s: GameState, f: Owner): Tile[] { return s.tiles.filt
 export function isCoastal(s: GameState, tile: number): boolean { return neighbors(s)[tile].some((n) => s.tiles[n].terrain === 'water'); }
 export function upkeepOf(a: Army): number { return Math.max(0, a.units.length - ARMY_FREE_SIZE); }
 export function wallAt(s: GameState, tile: number) { return s.walls.find((w) => w.tile === tile); }
+export function emptyStats(): PlayerStats {
+  return { income: 0, loot: 0, upkeep: 0, spentUnits: 0, spentBuild: 0, recruited: 0, hired: 0, lost: 0, spells: 0, terraformed: 0, peakUnits: 0, peakCities: 0, peakTiles: 0, fell: 0 };
+}
+
 export function fortressAt(s: GameState, tile: number) { return s.fortresses.find((f) => f.tile === tile); }
+/** Dwarves are cheaper for the side that found their fortress. */
+export function hireCost(s: GameState, fortress: number, f: FactionId): number {
+  const fo = fortressAt(s, fortress);
+  return fo?.finder === f ? DWARF_COST : DWARF_COST_OTHERS;
+}
 export function tier3Count(s: GameState, f: FactionId): number {
   return ownArmies(s, f).reduce((n, a) => n + a.units.filter((u) => UNIT_STATS[u.type].tier === 3).length, 0);
 }
@@ -148,10 +157,10 @@ export function createGame(setup: GameSetup): { state: GameState; events: GameEv
   const order = new Rng(setup.seed ^ 0x0de5).shuffle(setup.slots.filter((s) => s.kind !== 'off'));
   const players: PlayerState[] = order.map((s) => ({
     faction: s.faction, kind: s.kind === 'ai' ? 'ai' : 'human', controller: s.controller, name: s.name,
-    alive: true, gold: START_GOLD, noCity: 0, kills: 0, spell: SPELL_COOLDOWN,
+    alive: true, gold: START_GOLD, noCity: 0, kills: 0, spell: SPELL_COOLDOWN, stats: emptyStats(),
   }));
   const state: GameState = {
-    version: 4, setup, rng: setup.seed, radius: map.radius, tiles: map.tiles, regions: map.regions, armies: map.armies,
+    version: 5, setup, rng: setup.seed, radius: map.radius, tiles: map.tiles, regions: map.regions, armies: map.armies,
     cities: map.cities, builds: [], players, current: 0, phase: 'play', turn: 1, nextId: map.nextId, winner: null,
     actionCount: 0, pendingFight: null, fortresses: map.fortresses, walls: [],
   };
@@ -244,7 +253,7 @@ export function validate(s: GameState, a: Action): string | null {
       if (!DWARF_UNITS.includes(a.unit)) return 'The dwarves do not offer that.';
       const ar = myArmy(a.army);
       if (!ar || !neighbors(s)[a.fortress].includes(ar.tile)) return 'An army must stand next to the fortress.';
-      if (p.gold < unitCost(a.unit)) return 'Not enough gold.';
+      if (p.gold < hireCost(s, a.fortress, f)) return 'Not enough gold.';
       return null;
     }
     case 'terraform': {
@@ -328,6 +337,7 @@ export function applyAction(prev: GameState, a: Action): { state: GameState; eve
   const p = currentPlayer(s);
   const f = p.faction;
   const rng = new Rng(s.rng);
+  const gold0 = p.gold;
 
   switch (a.type) {
     case 'move': {
@@ -412,7 +422,7 @@ export function applyAction(prev: GameState, a: Action): { state: GameState; eve
       break;
     }
     case 'hire': {
-      p.gold -= unitCost(a.unit);
+      p.gold -= hireCost(s, a.fortress, f);
       const ar = armyById(s, a.army)!;
       ar.units.push({ id: s.nextId++, type: a.unit, hp: UNIT_STATS[a.unit].hp });
       events.push({ type: 'hired', p: f, fortress: a.fortress, unit: a.unit, army: ar.id });
@@ -439,7 +449,7 @@ export function applyAction(prev: GameState, a: Action): { state: GameState; eve
         events.push({ type: 'spellCast', p: f, spell: 'volley', army: ar.id, tile: a.target! });
         volley(s, rng, ar, a.target!, events);
       } else {
-        s.walls.push({ tile: a.target!, hp: WALL_HP });
+        s.walls.push({ tile: a.target!, hp: wallHp(s.turn) });
         events.push({ type: 'spellCast', p: f, spell: 'wall', army: -1, tile: a.target! });
       }
       break;
@@ -476,7 +486,26 @@ export function applyAction(prev: GameState, a: Action): { state: GameState; eve
     }
   }
   s.rng = rng.state;
+  tally(s, p, a, gold0);
   return { state: s, events };
+}
+
+/** Keep the running totals shown in the end-of-game report. */
+function tally(s: GameState, p: PlayerState, a: Action, gold0: number) {
+  const st = p.stats;
+  const spent = Math.max(0, gold0 - p.gold);
+  if (a.type === 'recruit') { st.recruited++; st.spentUnits += spent; }
+  else if (a.type === 'hire') { st.hired++; st.spentUnits += spent; }
+  else if (a.type === 'build' || a.type === 'upgrade' || a.type === 'improve') st.spentBuild += spent;
+  else if (a.type === 'spell') st.spells++;
+  else if (a.type === 'terraform') st.terraformed++;
+  for (const pl of s.players) {
+    if (!pl.alive) continue;
+    const ps = pl.stats;
+    ps.peakUnits = Math.max(ps.peakUnits, unitCount(s, pl.faction));
+    ps.peakCities = Math.max(ps.peakCities, ownCities(s, pl.faction).length);
+    ps.peakTiles = Math.max(ps.peakTiles, s.tiles.reduce((n, t) => n + (t.owner === pl.faction ? 1 : 0), 0));
+  }
 }
 
 /** An army stands on a hex: it now belongs to that side. */
@@ -488,6 +517,7 @@ function claim(s: GameState, tile: number, f: FactionId, captured: number[], for
   if (t.improved && t.owner && t.owner !== 'neutral') {
     const gold = t.improved;
     player(s, f)!.gold += gold;
+    player(s, f)!.stats.loot += gold;
     events.push({ type: 'pillaged', p: f, tile, gold });
     t.improved = 0;
   }
@@ -502,6 +532,7 @@ function discover(s: GameState, tile: number, f: Owner, events: GameEvent[]) {
   for (const fo of s.fortresses) {
     if (fo.discovered || !neighbors(s)[tile].includes(fo.tile)) continue;
     fo.discovered = true;
+    if (f !== 'neutral' && f !== null) fo.finder = f as FactionId;
     events.push({ type: 'discovered', p: f as FactionId, tile: fo.tile });
   }
 }
@@ -597,8 +628,8 @@ function fightRound(s: GameState, rng: Rng, round: 1 | 2, events: GameEvent[]) {
   ev.bounty = { att: killedDef.reduce((g, u) => g + bounty(u.type), 0), def: killedAtt.reduce((g, u) => g + bounty(u.type), 0) };
   const pa = att.owner !== 'neutral' ? player(s, att.owner) : undefined;
   const pd = defOwner !== 'neutral' ? player(s, defOwner) : undefined;
-  if (pa) { pa.kills += killedDef.length; pa.gold += ev.bounty.att; }
-  if (pd) { pd.kills += killedAtt.length; pd.gold += ev.bounty.def; }
+  if (pa) { pa.kills += killedDef.length; pa.gold += ev.bounty.att; pa.stats.loot += ev.bounty.att; pa.stats.lost += killedAtt.length; }
+  if (pd) { pd.kills += killedAtt.length; pd.gold += ev.bounty.def; pd.stats.loot += ev.bounty.def; pd.stats.lost += killedDef.length; }
   pf.deaths += dead.size;
 
   ev.defenderWiped = wall ? wall.hp <= 0 : !defArmies.some((a) => a.units.length);
@@ -636,7 +667,10 @@ function volley(s: GameState, rng: Rng, ar: Army, target: number, events: GameEv
   ev.bounty.att = killed.reduce((g, u) => g + bounty(u.type), 0);
   const pa = player(s, ar.owner as FactionId)!;
   pa.gold += ev.bounty.att;
+  pa.stats.loot += ev.bounty.att;
   pa.kills += killed.length;
+  const pv = defArmies[0] && defArmies[0].owner !== 'neutral' ? player(s, defArmies[0].owner) : undefined;
+  if (pv) pv.stats.lost += killed.length;
   s.armies = s.armies.filter((x) => x.units.length > 0);
   ev.defenderWiped = !defArmies.some((a) => a.units.length);
   events.push(ev);
@@ -652,10 +686,10 @@ function endFight(s: GameState, rng: Rng, events: GameEvent[]) {
   const sides: [Army[], number][] = [[[att], att.tile], [defArmies, pf.target]];
   for (const [armies, tile] of sides) {
     if (!armies.length || armies[0].owner !== 'necro' || pf.deaths === 0) continue;
-    const extra = pf.necroPriests * Math.min(3, pf.deaths);
+    const extra = pf.necroPriests * Math.min(RAISE.priestRolls, pf.deaths);
     const rolls: number[] = [];
     for (let i = 0; i < pf.deaths + extra; i++) rolls.push(1 + rng.int(6));
-    const raised = Math.min(pf.deaths, rolls.filter((r) => r === 6).length);
+    const raised = Math.min(pf.deaths, rolls.filter((r) => r >= RAISE.on).length);
     const home = armies.find((x) => x.units.length) ?? armies[0];
     for (let i = 0; i < raised; i++) home.units.push({ id: s.nextId++, type: 'skeleton', hp: 1 });
     const raise: RaiseResult = { rolls, priestRolls: extra, raised, army: home.id };
@@ -766,6 +800,7 @@ function startTurn(s: GameState, _rng: Rng, events: GameEvent[], first: boolean)
   const income = computeIncome(s, f);
   if (!first) {
     p.gold += income.gold;
+    p.stats.income += income.gold;
     let paid = 0;
     let unpaid = 0;
     const broke: number[] = [];
@@ -775,6 +810,7 @@ function startTurn(s: GameState, _rng: Rng, events: GameEvent[], first: boolean)
       if (p.gold >= cost) { p.gold -= cost; paid += cost; ar.lowMorale = false; }
       else { unpaid += cost - p.gold; paid += p.gold; p.gold = 0; ar.lowMorale = true; broke.push(ar.id); }
     }
+    p.stats.upkeep += paid;
     if (paid || unpaid) events.push({ type: 'upkeep', p: f, paid, unpaid, armies: broke });
   }
 
@@ -806,6 +842,7 @@ function eliminate(s: GameState, f: FactionId, reason: 'units' | 'cities', event
   const p = player(s, f)!;
   if (!p.alive) return;
   p.alive = false;
+  p.stats.fell = s.turn;
   s.armies = s.armies.filter((a) => a.owner !== f);
   s.cities = s.cities.filter((c) => c.owner !== f);
   s.builds = s.builds.filter((b) => b.owner !== f);

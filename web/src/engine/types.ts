@@ -83,6 +83,26 @@ export interface PlayerState {
   /** Own turns until the faction spell is ready (0 = ready). */
   spell: number;
   kills: number;
+  /** Running totals for the end-of-game report (playtesting and balance). */
+  stats: PlayerStats;
+}
+
+export interface PlayerStats {
+  income: number;
+  loot: number;
+  upkeep: number;
+  spentUnits: number;
+  spentBuild: number;
+  recruited: number;
+  hired: number;
+  lost: number;
+  spells: number;
+  terraformed: number;
+  peakUnits: number;
+  peakCities: number;
+  peakTiles: number;
+  /** Round in which the faction fell; 0 while alive. */
+  fell: number;
 }
 
 export interface GameSetup {
@@ -92,7 +112,7 @@ export interface GameSetup {
 }
 
 export interface GameState {
-  version: 4;
+  version: 5;
   setup: GameSetup;
   rng: number;
   radius: number;
@@ -109,7 +129,7 @@ export interface GameState {
   winner: FactionId | null;
   actionCount: number;
   pendingFight: PendingFight | null;
-  fortresses: { tile: number; discovered: boolean }[];
+  fortresses: { tile: number; discovered: boolean; finder?: FactionId | null }[];
   walls: { tile: number; hp: number }[];
 }
 

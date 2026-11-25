@@ -37,7 +37,7 @@ export const UNIT_STATS: Record<UnitType, UnitStats> = {
     type: 'treant', name: 'Treant', plural: 'Treants', faction: 'elves', tier: 3, attack: 2, defense: 4, hp: 2,
     ability: 'Awakens in any enchanted forest; the forest becomes plains.',
   },
-  irongut: { type: 'irongut', name: 'Iron Gut', plural: 'Iron Guts', faction: 'giants', tier: 1, attack: 2, defense: 1, hp: 2 },
+  irongut: { type: 'irongut', name: 'Iron Gut', plural: 'Iron Guts', faction: 'giants', tier: 1, attack: 1, defense: 1, hp: 2 },
   belcher: {
     type: 'belcher', name: 'Lead Belcher', plural: 'Lead Belchers', faction: 'giants', tier: 2, attack: 2, defense: 1, hp: 2,
     ability: 'On a 6, fires again: 4+ wounds the weakest enemy before the fight; another 6 fires once more.',
@@ -70,10 +70,14 @@ export const UNIT_STATS: Record<UnitType, UnitStats> = {
 };
 
 export const DWARF_UNITS: UnitType[] = ['runepriest', 'woodcutter', 'slayer'];
-export const DWARF_COST = 6;
+export const DWARF_COST = 6; // for the side that found the fortress
+export const DWARF_COST_OTHERS = 9;
+/** Tunable numbers for the necromancers' raising (kept in one object for balance runs). */
+export const RAISE = { on: 5, priestRolls: 3 };
 export const SPELL_COOLDOWN = 3;
 export const ENCHANTED_GOLD = 2; // Evergarden: gold per enchanted forest
-export const WALL_HP = 2;
+export const WALL_HP = 2; // +1 for every 10 rounds played
+export function wallHp(turn: number): number { return WALL_HP + Math.floor(turn / 10); }
 
 export const SPELLS: Record<FactionId, { name: string; text: string }> = {
   necro: { name: 'Bone Colossus', text: 'Fuse 3 skeletons of one army into a Bone Colossus (tier 3).' },

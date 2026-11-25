@@ -1,10 +1,10 @@
 import { hexDistance } from './hex';
 import {
   TERRAIN_COST, armiesAt, armyStrength, attackTargets, cityAt, currentPlayer, defenseBonus, neighbors, ownArmies, ownCities,
-  pathTo, reachable, terraformTargets, unitCount, validate, wallAt,
+  hireCost, pathTo, reachable, terraformTargets, unitCount, validate, wallAt,
 } from './rules';
 import type { Action, Army, FactionId, GameState } from './types';
-import { ARMY_FREE_SIZE, CITY_COST, DWARF_COST, DWARF_UNITS, FACTION_UNITS, IMPROVE_COST, MAX_CITY_LEVEL, MAX_IMPROVE, UNIT_STATS, UPGRADE_COST, unitCost } from './unitstats';
+import { ARMY_FREE_SIZE, CITY_COST, DWARF_UNITS, FACTION_UNITS, IMPROVE_COST, MAX_CITY_LEVEL, MAX_IMPROVE, UNIT_STATS, UPGRADE_COST, unitCost } from './unitstats';
 
 // Armies the AI has finished with this turn (AI runs on one machine only).
 let doneKey = '';
@@ -133,11 +133,11 @@ export function aiNextAction(s: GameState): Action {
   }
 
   // 1e. Hire dwarves that counter the strongest rival.
-  if (p.gold >= DWARF_COST + 4) {
+  {
     const rivals = s.players.filter((x) => x.alive && x.faction !== f).sort((x, y) => unitCount(s, y.faction) - unitCount(s, x.faction));
     const want = DWARF_UNITS.find((u) => UNIT_STATS[u].counters === rivals[0]?.faction);
     for (const fo of s.fortresses) {
-      if (!fo.discovered || !want) continue;
+      if (!fo.discovered || !want || p.gold < hireCost(s, fo.tile, f) + 4) continue;
       const a = mine.find((x) => nb[fo.tile].includes(x.tile));
       if (a) { const act = legal(s, { type: 'hire', p: f, fortress: fo.tile, unit: want, army: a.id }); if (act) return act; }
     }

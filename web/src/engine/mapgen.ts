@@ -20,7 +20,7 @@ export interface MapData {
   armies: Army[];
   cities: City[];
   nextId: number;
-  fortresses: { tile: number; discovered: boolean }[];
+  fortresses: { tile: number; discovered: boolean; finder?: FactionId | null }[];
 }
 
 export function buildNeighbors(tiles: Tile[]): number[][] {
@@ -207,7 +207,7 @@ export function generateMap(setup: GameSetup): MapData {
   }
 
   // Two dwarf fortresses on mountains, far from every capital and from each other.
-  const fortresses: { tile: number; discovered: boolean }[] = [];
+  const fortresses: { tile: number; discovered: boolean; finder?: FactionId | null }[] = [];
   const mts = land.filter((t) => t.terrain === 'mountain' && t.owner === null);
   for (let i = 0; i < 2 && mts.length; i++) {
     let best: Tile | null = null;

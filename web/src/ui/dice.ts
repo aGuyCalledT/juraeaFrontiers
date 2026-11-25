@@ -1,7 +1,7 @@
 import { sfx } from '../audio';
 import { FACTIONS, NEUTRAL } from '../engine/factions';
 import type { CombatDie, CombatEvent, Owner, RaiseResult, Unit } from '../engine/types';
-import { UNIT_STATS } from '../engine/unitstats';
+import { RAISE, UNIT_STATS } from '../engine/unitstats';
 import { motion, wait } from '../render/fx';
 import { playUnit, unitSvg } from '../render/units';
 import { ICONS } from './icons';
@@ -184,7 +184,7 @@ export class DiceTray {
     if (!row || !this.isOpen) return;
     row.classList.add('show');
     const status = this.el.querySelector('.bstatus') as HTMLElement;
-    status.textContent = 'The Death Cults roll for the fallen: every 6 rises as a skeleton.';
+    status.textContent = 'The Death Cults roll for the fallen: every 5 or 6 rises as a skeleton.';
     const n = r.rolls.length;
     row.innerHTML = r.rolls.map((_, i) => `<div class="die raise ${i >= n - r.priestRolls ? 'bone' : ''}"><div class="die-face">${face(rnd())}</div></div>`).join('');
     const dice = [...row.children] as HTMLElement[];
@@ -195,7 +195,7 @@ export class DiceTray {
     dice.forEach((d, i) => {
       d.classList.remove('rolling');
       d.firstElementChild!.innerHTML = face(r.rolls[i]);
-      if (r.rolls[i] === 6) d.classList.add(left-- > 0 ? 'won' : 'capped');
+      if (r.rolls[i] >= RAISE.on) d.classList.add(left-- > 0 ? 'won' : 'capped');
     });
     await this.w(450);
     if (r.raised) { sfx.magic(); status.textContent = `${r.raised} skeleton${r.raised > 1 ? 's rise' : ' rises'} to join the Death Cults!`; }
