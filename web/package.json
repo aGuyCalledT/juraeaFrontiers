@@ -1,0 +1,21 @@
+{
+  "name": "juraea-frontiers-web",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc --noEmit && vite build",
+    "preview": "vite preview",
+    "test": "tsx scripts/simulate.ts"
+  },
+  "devDependencies": {
+    "typescript": "^5.6.3",
+    "vite": "^6.0.0",
+    "tsx": "^4.19.2"
+  },
+  "dependencies": {
+    "@fontsource/fredoka": "^5.1.0",
+    "@fontsource/lilita-one": "^5.1.0"
+  }
+}
