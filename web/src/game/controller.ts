@@ -8,7 +8,7 @@ import {
 } from '../engine/rules';
 import type { Action, Army, FactionId, GameEvent, GameState, Owner, Tile } from '../engine/types';
 import {
-  ARMY_FREE_SIZE, CITY_ASSAULTS, CITY_COST, FACTION_UNITS, GROW_RANGE, IMPROVE_COST, MAX_CITY_LEVEL, MAX_IMPROVE, MOVE_POINTS, NO_CITY_LIMIT, RAZE_GOLD,
+  ARMY_FREE_SIZE, CITY_ASSAULTS, CITY_COST, FACTION_UNITS, IMPROVE_COST, MAX_CITY_LEVEL, MAX_IMPROVE, MOVE_POINTS, NO_CITY_LIMIT, RAZE_GOLD,
   CITY_TUNE, DWARF_UNITS, SPELLS, UNIT_STATS, UPGRADE_COST, bounty, garrisonTier, hitRank, refund, unitCost,
   type UnitType,
 } from '../engine/unitstats';
@@ -62,7 +62,7 @@ export class GameController {
   private selTile: number | null = null;
   private selFort: number | null = null;
   /** Waiting for a target hex. */
-  private mode: null | 'terraform' | 'volley' | 'wall' | 'treant' | 'grow' = null;
+  private mode: null | 'terraform' | 'volley' | 'wall' | 'treant' | 'build' = null;
   /** A rival army being looked at (read-only panel). */
   private selOther: number | null = null;
   /** Army being dragged, and the region under the pointer. */
@@ -170,6 +170,10 @@ export class GameController {
     }
     this.busy = false;
     this.el.classList.remove('is-busy');
+    if (this.mode === 'build' && !this.buildActions().size) {
+      this.mode = null;
+      if (this.controlsCurrent()) this.toast(`Build mode done: ${this.buildBlocked().charAt(0).toLowerCase()}${this.buildBlocked().slice(1)}`, 'info');
+    }
     if (this.dice.isOpen && !this.state.pendingFight && !this.state.pendingCity) this.dice.close();
     this.refresh();
     if (this.state.pendingFight && this.controlsCurrent()) {
@@ -346,7 +350,6 @@ export class GameController {
           fx.placed(this.board, e.city, 1);
           sfx.coin();
           if (watching) { this.board.focus([e.city]); await fx.wait(200); }
-          if (this.controlsCurrent()) { this.selArmy = e.army; }
           break;
         }
         case 'buildStarted': {
@@ -463,9 +466,61 @@ export class GameController {
       case 'volley': return ar ? regions.filter((t) => !validate(s, { type: 'spell', p: f, army: ar.id, target: t })) : [];
       case 'wall': return regions.filter((t) => !validate(s, { type: 'spell', p: f, army: -1, target: t }));
       case 'treant': return regions.filter((t) => this.selCity !== null && !validate(s, { type: 'recruit', p: f, city: this.selCity, unit: 'treant', at: t }));
-      case 'grow': return this.selCity !== null ? growTargets(s, this.selCity) : [];
+      case 'build': return [...this.buildActions().keys()];
       default: return [];
     }
+  }
+
+  /** Everything the build mode can do right now, by region: improve land, grow forest, upgrade cities. */
+  private buildActions(): Map<number, Action> {
+    const s = this.state;
+    const out = new Map<number, Action>();
+    if (!this.controlsCurrent() || s.pendingFight || s.pendingCity) return out;
+    const f = currentPlayer(s).faction;
+    const ok = (a: Action) => !validate(s, a);
+    if (f === 'elves') {
+      for (const c of ownCities(s, f)) {
+        if (c.grew) continue;
+        for (const t of growTargets(s, c.tile)) {
+          const a: Action = { type: 'grow', p: f, city: c.tile, tile: t };
+          if (!out.has(t) && ok(a)) out.set(t, a);
+        }
+      }
+    } else {
+      for (const t of ownedRegions(s, f)) {
+        const a: Action = { type: 'improve', p: f, tile: t.id };
+        if (ok(a)) out.set(t.id, a);
+      }
+    }
+    for (const c of ownCities(s, f)) {
+      const a: Action = { type: 'upgrade', p: f, city: c.tile };
+      if (ok(a)) out.set(c.tile, a);
+    }
+    return out;
+  }
+
+  /** Why the build mode has nothing to offer. */
+  private buildBlocked(): string {
+    const s = this.state;
+    const p = currentPlayer(s);
+    if (p.faction === 'elves') {
+      const cs = ownCities(s, p.faction);
+      if (cs.length && cs.every((c) => c.grew)) return 'Every city has grown its forest this turn.';
+      return p.gold < UPGRADE_COST(p.faction) ? 'No region to grow a forest on, and not enough gold to upgrade a city.' : 'Nothing to grow or upgrade right now.';
+    }
+    return p.gold < IMPROVE_COST[0] ? `Not enough gold: improving costs ${IMPROVE_COST[0]}.` : 'Nothing left to improve right now.';
+  }
+
+  private toggleBuild() {
+    if (!this.controlsCurrent() || this.busy) return;
+    if (this.mode === 'build') { this.mode = null; sfx.click(); this.refresh(); return; }
+    if (!this.buildActions().size) { sfx.error(); this.toast(this.buildBlocked(), 'warn'); return; }
+    this.clearSel();
+    fx.clearAim(this.board);
+    this.hideTooltip();
+    this.mode = 'build';
+    sfx.select();
+    this.refresh();
   }
 
   /** Clicks only select. Armies march and attack by drag and drop. */
@@ -478,6 +533,12 @@ export class GameController {
     const s = this.state;
     const f = currentPlayer(s).faction;
     const sel = this.selArmy !== null ? armyById(s, this.selArmy) : undefined;
+    if (this.mode === 'build') {
+      // Stays on until switched off or nothing is left to build.
+      const act = this.buildActions().get(id);
+      if (act) this.submit(act); else sfx.error();
+      return;
+    }
     if (this.mode) {
       const mode = this.mode;
       const targets = this.modeTargets();
@@ -487,7 +548,6 @@ export class GameController {
         if (mode === 'volley' && sel) this.submit({ type: 'spell', p: f, army: sel.id, target: id });
         if (mode === 'wall') this.submit({ type: 'spell', p: f, army: -1, target: id });
         if (mode === 'treant' && this.selCity !== null) this.submit({ type: 'recruit', p: f, city: this.selCity, unit: 'treant', at: id });
-        if (mode === 'grow' && this.selCity !== null) this.submit({ type: 'grow', p: f, city: this.selCity, tile: id });
       } else { sfx.error(); }
       this.refresh();
       return;
@@ -610,6 +670,7 @@ export class GameController {
     else if (k === '+' || k === '=') this.board.zoomBy(1.2);
     else if (k === '-') this.board.zoomBy(1 / 1.2);
     else if (k === 'f') this.board.fit(true);
+    else if (k === 'b') this.toggleBuild();
   }
 
   /** Select the next own army that can still act. */
@@ -655,6 +716,7 @@ export class GameController {
         <button class="icon-btn btn-zoom-in" aria-label="Zoom in">${ICONS.plus}</button>
         <button class="icon-btn btn-zoom-out" aria-label="Zoom out">${ICONS.minus}</button>
       </div>
+      <button class="build-btn" aria-label="Build mode" title="Build mode (B)"><span class="build-ico"></span><span class="build-label"></span><b class="build-count"></b></button>
       <button class="btn go primary"><span class="primary-label">End turn</span></button>
       <div class="tooltip" role="tooltip"></div>
       <div class="banner"></div>
@@ -681,6 +743,7 @@ export class GameController {
     this.q('.btn-zoom-in').addEventListener('click', () => this.board.zoomBy(1.25));
     this.q('.btn-zoom-out').addEventListener('click', () => this.board.zoomBy(1 / 1.25));
     this.q('.btn-next').addEventListener('click', () => this.cycleArmy());
+    this.q('.build-btn').addEventListener('click', () => this.toggleBuild());
     this.q('.command').addEventListener('click', (e) => this.onCommand(e));
     this.q('.modal').addEventListener('click', (e) => { if (e.target === e.currentTarget) this.closeModal(); });
   }
@@ -708,7 +771,6 @@ export class GameController {
       }
       case 'merge': if (ar) this.submit({ type: 'merge', p: f, tile: ar.tile }); break;
       case 'build': if (ar) this.submit({ type: 'build', p: f, army: ar.id }); break;
-      case 'grow': this.mode = this.mode === 'grow' ? null : 'grow'; this.refresh(); break;
       case 'other': {
         if (!ar) break;
         const other = this.myArmiesAt(ar.tile).find((x) => x.id !== ar.id);
@@ -756,6 +818,15 @@ export class GameController {
     this.el.style.setProperty('--turn-light', fac.light);
     this.el.classList.toggle('my-turn', mine);
 
+    const bb = this.q('.build-btn');
+    const buildable = mine && !this.busy ? this.buildActions().size : 0;
+    bb.classList.toggle('hidden', !mine || s.phase === 'over');
+    bb.classList.toggle('on', this.mode === 'build');
+    bb.classList.toggle('empty', !buildable && this.mode !== 'build');
+    const elfBuild = p.faction === 'elves';
+    if (bb.dataset.f !== p.faction) { bb.dataset.f = p.faction; this.q('.build-ico').innerHTML = elfBuild ? ICONS.sapling : ICONS.hammer; }
+    this.q('.build-label').textContent = this.mode === 'build' ? 'Done' : elfBuild ? 'Grow' : 'Improve';
+    this.q('.build-count').textContent = buildable && this.mode !== 'build' ? String(buildable) : '';
     const crestEl = this.q('.turn-crest');
     if (crestEl.dataset.f !== p.faction) { crestEl.dataset.f = p.faction; crestEl.innerHTML = crest(p.faction); }
     this.q('.turn-name').textContent = fac.short;
@@ -832,21 +903,24 @@ export class GameController {
         <div class="cmd-actions"><span class="cmd-note">Drag one of your armies onto it to attack.</span></div>`;
       return;
     }
-    if (!mine || (!ar && this.selCity === null && this.selTile === null && this.selFort === null)) { box.classList.add('hidden'); box.innerHTML = ''; return; }
+    if (!mine || (this.mode !== 'build' && !ar && this.selCity === null && this.selTile === null && this.selFort === null)) { box.classList.add('hidden'); box.innerHTML = ''; return; }
     box.classList.remove('hidden');
     const btn = (cmd: string, label: string, opts: { disabled?: string | null; cls?: string; ico?: string } = {}) =>
       `<button class="btn small ${opts.cls ?? ''}" data-cmd="${cmd}" ${opts.disabled ? `disabled title="${esc(opts.disabled)}"` : ''}>${opts.ico ?? ''}${label}</button>`;
-    const improveBtn = (tile: number) => {
-      const t = s.tiles[tile];
-      if (cityAt(s, tile) || t.owner !== f || f === 'elves') return '';
-      if (t.improved >= MAX_IMPROVE) return `<span class="cmd-note">Fully improved (+${t.improved} gold)</span>`;
-      const err = validate(s, { type: 'improve', p: f, tile });
-      return btn('improve', `Improve +1 gold · ${IMPROVE_COST[t.improved]}`, { ico: ICONS.gold, disabled: err });
-    };
     const close = `<button class="icon-btn small cmd-close" data-cmd="close" aria-label="Close">${ICONS.close}</button>`;
+    if (this.mode === 'build') {
+      const elves = f === 'elves';
+      const n = this.buildActions().size;
+      const what = elves
+        ? `Tap a glowing region to grow an enchanted forest (each city once per turn, next to it), or a city to upgrade it (${UPGRADE_COST(f)} gold).`
+        : `Tap a glowing region to improve it: +1 gold per turn for ${IMPROVE_COST[0]} gold (level 2: ${IMPROVE_COST[1]}). Tap a city to upgrade it (${UPGRADE_COST(f)} gold).`;
+      box.innerHTML = `<div class="cmd-head"><b>${elves ? 'Grow & build' : 'Improve & build'}</b><span>${what} ${plural(n, 'option')} left.</span>${close}</div>
+        <div class="cmd-actions">${btn('mode-cancel', 'Done', { cls: 'go', ico: ICONS.check })}</div>`;
+      return;
+    }
     if (this.mode) {
-      const what = { terraform: f === 'necro' ? 'Pick a forest to blight.' : 'Pick a forest to clear into plains.', volley: 'Pick an enemy army next to the archers.', wall: 'Pick an empty region next to one of your armies.', treant: 'Pick one of your enchanted forests.', grow: `Pick your own plains, desert or forest region next to the city (not next to a rival city).` }[this.mode];
-      const title = { treant: 'Awaken a Treant', terraform: f === 'necro' ? 'Blight forest' : 'Clear forest', grow: 'Grow an enchanted forest', volley: SPELLS[f].name, wall: SPELLS[f].name }[this.mode];
+      const what = { terraform: f === 'necro' ? 'Pick a forest to blight.' : 'Pick a forest to clear into plains.', volley: 'Pick an enemy army next to the archers.', wall: 'Pick an empty region next to one of your armies.', treant: 'Pick one of your enchanted forests.'}[this.mode];
+      const title = { treant: 'Awaken a Treant', terraform: f === 'necro' ? 'Blight forest' : 'Clear forest', volley: SPELLS[f].name, wall: SPELLS[f].name }[this.mode];
       box.innerHTML = `<div class="cmd-head"><b>${title}</b><span>${what}</span>${close}</div>
         <div class="cmd-actions">${btn('mode-cancel', 'Cancel', { cls: 'ghost' })}</div>`;
       return;
@@ -887,7 +961,6 @@ export class GameController {
           : `${here.length === 2 ? btn('merge', 'Merge armies', { cls: 'go' }) + btn('other', 'Other army') : btn('split', 'Split', { disabled: splitErr && !splitErr.startsWith('Choose') ? splitErr : ar.units.length < 2 ? 'Needs at least 2 units.' : null })}
              ${btn('dismiss', 'Dismiss', { cls: 'ghost' })}
              ${btn('build', `Build city · ${CITY_COST(f)}`, { ico: ICONS.home, disabled: buildErr })}
-             ${improveBtn(ar.tile)}
              ${(f === 'necro' || ar.units.some((u) => u.type === 'mammoth')) ? btn('terraform', f === 'necro' ? 'Blight forest' : 'Clear forest', { ico: f === 'necro' ? ICONS.skull : ICONS.march, disabled: terraformTargets(s, ar).length ? null : ar.attacked ? 'Uses the attack for this turn.' : 'No healthy forest here or next to the army.' }) : ''}
              ${btn('spell', `${SPELLS[f].name}${p.spell ? ` (${p.spell})` : ''}`, { cls: p.spell ? '' : 'spell', ico: ICONS.bolt, disabled: p.spell ? `Recharges in ${p.spell} turn${p.spell > 1 ? 's' : ''}.` : f === 'necro' ? validate(s, { type: 'spell', p: f, army: ar.id }) : f === 'elves' && !ar.units.some((u) => u.type === 'archer') ? 'Needs archers in this army.' : null })}
              <span class="cmd-note">${TERRAIN_INFO[t.terrain].name}: defence +${def.total}${def.labels.length ? ` (${def.labels.join(', ')})` : ''}</span>`}
@@ -900,14 +973,13 @@ export class GameController {
       const building = s.builds.find((b) => b.tile === t.id);
       box.innerHTML = `
         <div class="cmd-head"><b>${TERRAIN_INFO[t.terrain].name}</b><span>Yields ${yieldNow} gold per turn${t.improved ? ` (improved ${t.improved}/${MAX_IMPROVE})` : ''}${building ? ` · ${building.kind === 'improve' ? 'improvement' : 'building'} ready next turn` : ''}</span>${close}</div>
-        <div class="cmd-actions">${improveBtn(t.id)}<span class="cmd-note">Improvements add +1 gold each (max ${MAX_IMPROVE}, 1 turn to build). They improve the whole region and are destroyed if a rival takes it.</span></div>`;
+        <div class="cmd-actions"><span class="cmd-note">${f === 'elves' ? 'Evergarden earns from cities and enchanted forests. Grow forests with the build button (bottom left).' : `Improve the whole region with the build button (bottom left): +1 gold each, max ${MAX_IMPROVE}. Improvements are destroyed if a rival takes the region.`}</span></div>`;
       return;
     }
     // City panel
     const c = cityAt(s, this.selCity!)!;
     const garrison = this.myArmiesAt(c.tile)[0];
     const guard = garrisonUnit(c);
-    const growErr = c.grew ? 'Already grew a forest this round.' : growTargets(s, c.tile).length ? null : `No region to grow: own land within ${GROW_RANGE === 1 ? '1 region' : GROW_RANGE + ' regions'} of the city, not next to a rival city.`;
     const upErr = validate(s, { type: 'upgrade', p: f, city: c.tile });
     const coastal = isCoastal(s, c.tile);
     box.innerHTML = `
@@ -921,9 +993,8 @@ export class GameController {
       }).join('')}</div>
       <div class="cmd-actions">
         ${btn('upgrade', `Upgrade · ${UPGRADE_COST(f)}`, { ico: ICONS.shield, disabled: c.level >= MAX_CITY_LEVEL ? 'Fully upgraded.' : upErr })}
-        ${f === 'elves' ? btn('grow', this.mode === 'grow' ? 'Cancel forest' : 'Grow enchanted forest', { cls: this.mode === 'grow' ? 'go' : 'spell', ico: ICONS.bolt, disabled: growErr }) : ''}
         ${garrison ? btn('select-recruits', `Garrison (${garrison.units.length})`, { cls: 'go', ico: ICONS.troops }) : ''}
-        <span class="cmd-note">Tier 3: ${tier3Count(s, f)}/${tier3Limit(s, f)} (2 + 1 per city). ${f === 'elves' ? 'Treants awaken in an enchanted forest; each city grows one forest per round. ' : ''}Recruits join the garrison.${garrison && garrison.units.length >= ARMY_FREE_SIZE ? ` Above ${ARMY_FREE_SIZE} units an army costs upkeep.` : ''}</span>
+        <span class="cmd-note">Tier 3: ${tier3Count(s, f)}/${tier3Limit(s, f)} (2 + 1 per city). ${f === 'elves' ? 'Treants awaken in an enchanted forest; each city grows one forest per turn (build button). ' : ''}Recruits join the garrison.${garrison && garrison.units.length >= ARMY_FREE_SIZE ? ` Above ${ARMY_FREE_SIZE} units an army costs upkeep.` : ''}</span>
       </div>`;
   }
 
@@ -972,7 +1043,7 @@ export class GameController {
     const ar = this.selArmy !== null ? armyById(s, this.selArmy) : undefined;
     if (this.busy) t = 'Your orders are being carried out…';
     else if (this.splitPick) t = 'Choose the units for the new army.';
-    else if (this.mode === 'grow') t = 'Tap a highlighted region to grow an enchanted forest.';
+    else if (this.mode === 'build') t = 'Tap the glowing regions to build. Tap the build button again when you are done.';
     else if (ar) t = ar.mp > 0 ? 'Drag the army onto a region to march, or onto an enemy to attack.' : 'This army is done for the turn. Pick another or end the turn.';
     else if (this.selCity !== null) t = 'Recruit units into the city garrison.';
     else if (this.selTile !== null) t = 'Improve this region for more gold.';
@@ -986,7 +1057,7 @@ export class GameController {
     if (!this.controlsCurrent() || this.busy) { this.board.mark({}); return; }
     if (this.mode) {
       const sel = this.selArmy !== null ? armyById(s, this.selArmy)?.tile ?? null : this.selCity;
-      const peaceful = this.mode === 'grow' || this.mode === 'treant';
+      const peaceful = this.mode === 'build' || this.mode === 'treant';
       this.board.mark(peaceful ? { selected: sel, selectable: this.modeTargets(), dimOthers: true } : { selected: sel, targets: this.modeTargets(), dimOthers: true });
       return;
     }
@@ -1032,6 +1103,14 @@ export class GameController {
     }
     const sel = this.selArmy !== null ? armyById(s, this.selArmy) : undefined;
     let battle = '';
+    const bAct = this.mode === 'build' ? this.buildActions().get(id) : undefined;
+    if (bAct) {
+      const fNow = currentPlayer(s).faction;
+      const label = bAct.type === 'improve' ? `Tap: improve to level ${t.improved + 1}, +1 gold per turn (${IMPROVE_COST[t.improved]} gold).`
+        : bAct.type === 'grow' ? 'Tap: grow an enchanted forest here (+2 gold per turn, +1 defence).'
+        : `Tap: upgrade the city to level ${(city?.level ?? 0) + 1} (${UPGRADE_COST(fNow)} gold, 1 turn).`;
+      battle = `<div class="tip-row tip-feat">${label}</div>`;
+    }
     if (sel && this.controlsCurrent() && attackTargets(s, sel).includes(id)) {
       const def = armies.filter((a) => a.owner !== sel.owner).flatMap((a) => a.units);
       if (city && city.owner !== sel.owner) def.push(garrisonUnit(city));

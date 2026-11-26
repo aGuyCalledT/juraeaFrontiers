@@ -27,6 +27,8 @@ export const ICONS = {
   book: wrap(`<path d="M4 7 Q10 5 16 8 Q22 5 28 7 L28 26 Q22 24 16 27 Q10 24 4 26 Z" fill="#e8d3a6" ${s}/><path d="M16 8 L16 27" ${s}/>`),
   globe: wrap(`<circle cx="16" cy="16" r="12" fill="#5fb8ff" ${s}/><path d="M9 10 Q14 12 12 17 Q8 19 9 24 M19 6 Q17 11 22 13 Q27 13 26 19" fill="none" stroke="#3f9a3a" stroke-width="3" stroke-linecap="round"/>`),
   home: wrap(`<path d="M4 15 L16 5 L28 15 L25 15 L25 27 L7 27 L7 15 Z" fill="#e0452f" ${s}/><path d="M13 27 L13 19 L19 19 L19 27" fill="#4a2c18" ${s}/>`),
+  hammer: wrap(`<path d="M14 13 L24 27 L20.5 29.5 L11 15.5 Z" fill="#c98a4b" ${s}/><path d="M5 9 L14 3 L22 8 L19 12 L15 10 L9 15 Z" fill="#9aa3ad" ${s}/><path d="M14 3 L22 8" stroke="#dfe6ec" stroke-width="1.6"/>`),
+  sapling: wrap(`<path d="M16 29 L16 15" stroke="#7a4a22" stroke-width="3.4" stroke-linecap="round"/><path d="M16 29 L16 15" fill="none" ${s}/><path d="M16 17 Q6 17 5 7 Q14 6 16 17 Z" fill="#5fc25a" ${s}/><path d="M16 14 Q18 3 28 4 Q28 14 16 14 Z" fill="#8fdc5e" ${s}/><circle cx="24" cy="23" r="2.4" fill="#ffe27a" ${s}/><circle cx="8" cy="24" r="1.8" fill="#ffe27a" ${s}/>`),
   wind: wrap(`<path d="M4 12 L20 12 Q25 12 25 8 Q25 4 21 4 M4 18 L26 18 Q30 18 30 22 Q30 26 26 26 M4 24 L14 24" fill="none" ${s}/>`),
 };
 
