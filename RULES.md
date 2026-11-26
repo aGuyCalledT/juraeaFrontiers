@@ -33,7 +33,7 @@ These are the rules the game implements. Points marked *(assumption)* were not s
 5. **Unlimited rounds (v3):** after every round the attacker chooses to **fight on** or **retreat**. The **Auto-fight** switch fights on until one side is gone (it stays on for later fights; switch it off at any time).
 6. Killing a **tier-3 unit or a Wildling gives 1 gold**.
 
-**Defence bonus:** mountains +1, own city +1, **own capital +2**, plus the elves' forest bonuses. A siege engine in the attacking army lowers the defenders' bonus by 1. It is shown as a shield next to each army.
+**Defence bonus:** mountains +1, own city +1, **own capital +2**, Giants in their stone wall region +1, plus the elves' forest bonuses. A siege engine in the attacking army lowers the defenders' bonus by 1. It is shown as a shield next to each army.
 
 **HP:** damage stays after the fight. Units next to one of their own cities heal 1 HP at the start of their turn.
 
@@ -46,6 +46,8 @@ These are the rules the game implements. Points marked *(assumption)* were not s
 - Income per turn, **per region**: plains +1, mountains +1, forest +½ (every 2 forest regions +1), desert 0; city +3, city by the sea +4; each improvement level +1.
   - **Evergarden:** only cities (+3/+4) and **+2 per enchanted forest region**. Elves cannot improve land.
 - **Tier-3 limit:** at most **2 tier-3 units + 1 per city** (Bone Colossi count).
+- **Build mode (v3.1):** improvements, forest growing and city upgrades all start from the **build button in the bottom-left corner**. Tap it, then tap the glowing regions directly; tap it again (or Done) to stop. It switches off by itself when nothing is left to build or you run out of gold.
+- Recruiting no longer selects the new unit, so you can buy several in a row.
 - **Improving** works on a **whole region** (v3): any own region without a city, twice. Level 1 costs 3 gold, level 2 costs 6. Ready after 1 turn. When another player takes the region, the improvement is destroyed and the conqueror gets 1 gold (2 for level 2).
 - Unit costs: tier 1 = **3**, tier 2 = **6**, tier 3 = **9** gold. **Giants pay double.**
 - **Recruiting** only happens in cities. Recruits join the garrison inside the city.
@@ -83,7 +85,7 @@ Any Death Cult army can **blight a forest** (own region or adjacent) instead of 
 
 ### Evergarden (Elves)
 **Passive:** +1 defence in healthy forests.
-**Growing forest (v3):** each Evergarden city can turn **one region per turn** into an **enchanted forest** (city panel → Grow enchanted forest). The region must be own land **next to that city's region** (range 1, a balance choice; range 2 made Evergarden win 48 %) and not next to a rival city. This also heals blighted forest. Forests no longer grow by themselves and druids no longer enchant.
+**Growing forest (v3):** each Evergarden city can turn **one region per turn** into an **enchanted forest** (build button). The region must be own land **next to that city's region** (range 1, a balance choice; range 2 made Evergarden win 48 %) and not next to a rival city. This also heals blighted forest. Forests no longer grow by themselves and druids no longer enchant.
 **Treants** are bought in a city but awaken in **any enchanted elven forest**; that forest turns into plains.
 
 | Tier | Unit | Attack | Defence | HP | Special |
@@ -100,7 +102,7 @@ Enchanted forests give elves +1 defence and +2 gold per turn. The enchantment is
 | Tier | Unit | Attack | Defence | HP | Special |
 |---|---|---|---|---|---|
 | 1 | Iron Gut (giant with a huge club) | +2 | +0 | 2 | v3: defence −1; attack back to +2 *(balance choice)*. |
-| 2 | Lead Belcher (giant with a ship's cannon) | +2 | +0 | 2 | On a natural 6 he fires again: 4+ wounds the weakest enemy before the exchange (a unit killed this way loses its die). Another 6 fires once more. The first 6 still counts normally *(assumption)*. |
+| 2 | Lead Belcher (giant with a ship's cannon) | +2 | +0 | 2 | **Attacking or defending** (v3.1: also against Arrow Rain), on a natural 6 he fires again: 4+ wounds the weakest enemy before the exchange (a unit killed this way loses its die). Another 6 fires once more. The first 6 still counts normally *(assumption)*. |
 | 3 | Mammoth | +2 | +4 | 2 | At the start of its turn each mammoth heals 1 HP on the best wounded non-mammoth unit in its army. An army with a mammoth can **clear a forest** (own region or adjacent) into plains instead of attacking. |
 
 ## Terraforming and attacks
@@ -113,7 +115,7 @@ Every faction has one spell. It is ready after 3 of its own turns and recharges 
 |---|---|---|
 | Death Cults | Bone Colossus | 3 skeletons of one army fuse into a Bone Colossus (tier 3: +3 / +1 / 3 HP *(stats are my choice)*). |
 | Evergarden | Arrow Rain | The archers of one army shoot an adjacent enemy army: every archer rolls, highest against highest, the enemy cannot hurt them. Does not use the army's attack *(assumption)*. |
-| Giants | Stone Wall | A wall on an empty region next to a Giant army. Only Giants can enter it. Others can attack it: it rolls 1 die with +4, has **2 HP, +1 for every 10 rounds played** (3 HP from round 10, 4 from round 20…), never strikes back, and attacking it costs all remaining movement. |
+| Giants | Stone Wall | A wall on an empty region next to a Giant army. Only Giants can enter it. Others can attack it: it rolls 1 die with +4, has **2 HP, +1 for every 10 rounds played** (3 HP from round 10, 4 from round 20…), never strikes back, and attacking it costs all remaining movement. Giant armies standing in the wall's region are **entrenched: +1 defence** (v3.1). |
 
 ## Dwarf fortresses
 - Every map has **2 dwarf fortresses** on mountains, far from the capitals. Nobody can enter them.

@@ -223,6 +223,7 @@ export function defenseBonus(s: GameState, tile: Tile, owner: Owner): { total: n
     const d = city.capital ? CITY_TUNE.capitalDef : CITY_TUNE.cityDef;
     total += d; labels.push(`${city.capital ? 'Capital' : 'City'} +${d}`);
   }
+  if (owner === 'giants' && wallAt(s, anchorOf(s, tile.id))) { total += 1; labels.push('Entrenched +1'); }
   if (owner === 'elves' && tile.terrain === 'forest' && !tile.corrupted) { total += 1; labels.push('Forest Wardens +1'); }
   if (owner === 'elves' && tile.enchanted && !tile.corrupted) { total += 1; labels.push('Enchanted +1'); }
   return { total, labels };
@@ -668,6 +669,24 @@ function rollSide(rng: Rng, units: Unit[], side: 'att' | 'def', bonus: number, f
   });
 }
 
+/** Lead Belchers, attacking or defending: a natural 6 fires an extra shot before the exchange. */
+function cannons(rng: Rng, ev: CombatEvent, attUnits: Unit[], defUnits: Unit[], dead: Set<number>) {
+  for (const [side, dice, foes] of [['att', ev.attDice, defUnits], ['def', ev.defDice, attUnits]] as const) {
+    for (const d of dice) {
+      if (d.type !== 'belcher' || d.roll !== 6) continue;
+      const shot: CannonShot = { side, shooter: d.unit, rolls: [], hits: [] };
+      for (let guard = 0; guard < 6; guard++) {
+        const r = 1 + rng.int(6);
+        shot.rolls.push(r);
+        if (r >= 4) { const v = wound(foes, dead); if (v >= 0) shot.hits.push(v); }
+        if (r !== 6) break;
+      }
+      ev.shots.push(shot);
+    }
+  }
+  for (const d of [...ev.attDice, ...ev.defDice]) if (dead.has(d.unit)) d.void = true;
+}
+
 function wound(units: Unit[], dead: Set<number>): number {
   const alive = units.filter((u) => !dead.has(u.id) && u.hp > 0).sort(byWeakness);
   const v = alive[0];
@@ -709,21 +728,7 @@ function fightRound(s: GameState, rng: Rng, events: GameEvent[]) {
   ev.defDice = rollSide(rng, defUnits, 'def', db.total + defMorale, att.owner);
   const dead = new Set<number>();
 
-  // Lead Belchers: a natural 6 fires an extra shot before the exchange.
-  for (const [side, dice, foes] of [['att', ev.attDice, defUnits], ['def', ev.defDice, attUnits]] as const) {
-    for (const d of dice) {
-      if (d.type !== 'belcher' || d.roll !== 6) continue;
-      const shot: CannonShot = { side, shooter: d.unit, rolls: [], hits: [] };
-      for (let guard = 0; guard < 6; guard++) {
-        const r = 1 + rng.int(6);
-        shot.rolls.push(r);
-        if (r >= 4) { const v = wound(foes, dead); if (v >= 0) shot.hits.push(v); }
-        if (r !== 6) break;
-      }
-      ev.shots.push(shot);
-    }
-  }
-  for (const d of [...ev.attDice, ...ev.defDice]) if (dead.has(d.unit)) d.void = true;
+  cannons(rng, ev, attUnits, defUnits, dead);
 
   // Best against best; spare dice are lost. A side without dice is hit by every enemy die.
   const A = ev.attDice.filter((d) => !d.void).sort((x, y) => y.total - x.total);
@@ -785,8 +790,10 @@ function volley(s: GameState, rng: Rng, ar: Army, target: number, events: GameEv
     attackMods: ['Arrow Rain'], round: 1, final: true, bounty: { att: 0, def: 0 }, volley: true,
   };
   const dead = new Set<number>();
-  const A = [...ev.attDice].sort((x, y) => y.total - x.total);
-  const D = [...ev.defDice].sort((x, y) => y.total - x.total);
+  // Arrow Rain cannot be answered by dice, but Lead Belchers still fire their cannons.
+  cannons(rng, ev, archers, defUnits, dead);
+  const A = ev.attDice.filter((d) => !d.void).sort((x, y) => y.total - x.total);
+  const D = ev.defDice.filter((d) => !d.void).sort((x, y) => y.total - x.total);
   if (!D.length) for (const a of A) ev.pairs.push({ att: a.unit, def: -1, winner: 'att', victim: wound(defUnits, dead) });
   for (let i = 0; i < Math.min(A.length, D.length); i++) {
     const hit = A[i].total > D[i].total;
@@ -794,16 +801,20 @@ function volley(s: GameState, rng: Rng, ar: Army, target: number, events: GameEv
   }
   ev.dead = [...dead];
   for (const d of defArmies) d.units = d.units.filter((u) => !dead.has(u.id));
+  ar.units = ar.units.filter((u) => !dead.has(u.id));
+  const lostArchers = archers.filter((u) => dead.has(u.id)).length;
   const killed = defUnits.filter((u) => dead.has(u.id));
   ev.bounty.att = killed.reduce((g, u) => g + bounty(u.type), 0);
   const pa = player(s, ar.owner as FactionId)!;
   pa.gold += ev.bounty.att;
   pa.stats.loot += ev.bounty.att;
   pa.kills += killed.length;
+  pa.stats.lost += lostArchers;
   const pv = defArmies[0] && defArmies[0].owner !== 'neutral' ? player(s, defArmies[0].owner) : undefined;
-  if (pv) pv.stats.lost += killed.length;
+  if (pv) { pv.stats.lost += killed.length; pv.kills += lostArchers; }
   s.armies = s.armies.filter((x) => x.units.length > 0);
   ev.defenderWiped = !defArmies.some((a) => a.units.length);
+  ev.attackerWiped = ar.units.length === 0;
   events.push(ev);
   checkElimination(s, events);
 }

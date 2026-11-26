@@ -42,7 +42,7 @@ export const UNIT_STATS: Record<UnitType, UnitStats> = {
   irongut: { type: 'irongut', name: 'Iron Gut', plural: 'Iron Guts', faction: 'giants', tier: 1, attack: 2, defense: 0, hp: 2 },
   belcher: {
     type: 'belcher', name: 'Lead Belcher', plural: 'Lead Belchers', faction: 'giants', tier: 2, attack: 2, defense: 0, hp: 2,
-    ability: 'On a 6, fires again: 4+ wounds the weakest enemy before the fight; another 6 fires once more.',
+    ability: 'Attacking or defending (even against Arrow Rain): on a 6 the cannon fires again; 4+ wounds the weakest enemy before the exchange, another 6 fires once more.',
   },
   mammoth: {
     type: 'mammoth', name: 'Mammoth', plural: 'Mammoths', faction: 'giants', tier: 3, attack: 2, defense: 4, hp: 2,
@@ -71,7 +71,7 @@ export const UNIT_STATS: Record<UnitType, UnitStats> = {
   },
   wall: {
     type: 'wall', name: 'Stone Wall', plural: 'Stone Walls', faction: 'giants', tier: 1, attack: 0, defense: 4, hp: 2,
-    ability: 'Blocks everyone but the Giants. Never strikes back; attacking it uses up all movement.',
+    ability: 'Blocks everyone but the Giants; Giant armies standing in its region are entrenched (+1 defence). Never strikes back; attacking it uses up all movement.',
   },
 };
 
@@ -88,7 +88,7 @@ export function wallHp(turn: number): number { return WALL_HP + Math.floor(turn 
 export const SPELLS: Record<FactionId, { name: string; text: string }> = {
   necro: { name: 'Bone Colossus', text: 'Fuse 3 skeletons of one army into a Bone Colossus (tier 3).' },
   elves: { name: 'Arrow Rain', text: 'The archers of one army shoot an adjacent enemy army. The enemy cannot strike back.' },
-  giants: { name: 'Stone Wall', text: 'Raise a wall on an empty hex next to a Giant army. Only Giants can pass it.' },
+  giants: { name: 'Stone Wall', text: 'Raise a wall on an empty region next to a Giant army. Only Giants can pass it; Giants standing there get +1 defence.' },
 };
 
 export const FACTION_UNITS: Record<FactionId, [UnitType, UnitType, UnitType]> = {
