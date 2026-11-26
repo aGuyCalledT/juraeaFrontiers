@@ -1,74 +1,78 @@
-# Juräa Frontiers – Rules v2.2
+# Juräa Frontiers – Rules v3
 
 These are the rules the game implements. Points marked *(assumption)* were not specified and were decided during implementation; change them if you want something else.
 
+## Regions (v3)
+- The map is split into **regions of 2–4 connected hexes**, mostly of one biome. Every hex of a region has the same terrain and owner.
+- As in Risk, a region is **one field**: armies stand in, move between, attack and own whole regions. Regions touching along any hex edge are neighbours.
+- Every region has a name (shown in the tooltip).
+
 ## Turn
 - Free order: recruit, build, move and attack with each army in any order, then **End turn**.
+- **Drag an army** onto a region to march, or onto an enemy region to attack. The arrow is red with crossed swords for an attack and grey with an X where the army cannot go. Tapping only selects; tapping another army selects that one (a rival army shows a read-only panel).
 - Every army has **3 movement points** per turn.
-- Entering a hex costs: plains 1, desert 1, forest 2, mountains 3. If a friendly army stands there: −1 (minimum 1).
-- About a third of all mountains are **high peaks**: impassable for everyone (the map always stays connected).
-- Armies may enter and stand in their **own cities**. Enemy cities can only be taken by siege.
-- **Attacking costs 1 movement.** Each army may attack **once per turn**. An attack has **two rounds**; after round 1 the attacker chooses to fight on or retreat.
+- Entering a region costs: plains 1, desert 1, forest 2, mountains 3. If a friendly army stands there: −1 (minimum 1).
+- About a third of all mountain regions are **high peaks**: impassable for everyone (the map always stays connected).
+- Armies may enter and stand in their **own cities**. Enemy cities must be attacked.
+- **Attacking costs 1 movement.** Each army may attack **once per turn**.
 - Attacking first and moving afterwards is allowed if movement is left.
-- An army that destroys an enemy but has no movement left does not move onto the hex.
-- A hex belongs to whoever stood on it last. Armies may leave a hex empty.
+- A region belongs to whoever stood on it last. Armies may leave a region empty.
 
 ## Armies
 - An army is a group of units and moves as one. Up to **8 units are free**; every unit above 8 costs **1 gold per turn** upkeep (shown on the army). If the player cannot pay, the army gets **low morale: −1 attack and −1 defence** until upkeep is paid again.
 - Units can be **dismissed** at any time for a third of their price (rounded down).
-- At most **2 armies** of the same player per hex.
-- **Split**: an army can split into two on its hex, only if no second army stands there.
-- **Merge**: with two armies on one hex the Split button becomes Merge. The merged army keeps the **lower** remaining movement *(assumption: and counts as having attacked if either had)*.
-- If a hex with two armies is attacked, both fight as one.
+- At most **2 armies** of the same player per region.
+- **Split** and **Merge** as before. The merged army keeps the **lower** remaining movement and counts as having attacked if either had.
+- If a region with two armies is attacked, both fight as one.
 
 ## Combat
 1. Every attacking unit rolls **1d6 + attack**.
 2. Every defending unit rolls **1d6 + defence + terrain bonus**.
-3. Both sides sort their results highest first and compare in pairs (highest against highest, …).
-   - Attack > defence: the defender takes 1 hit.
-   - Attack ≤ defence: the attacker takes 1 hit.
-   - **Spare dice are lost** (as in Risk).
-4. Hits remove HP from the weakest units first: tier 1, then tier 2, then tier 3 *(assumption: within a tier, the most wounded first)*.
-5. An attack has **two** such rounds; units killed in round 1 do not roll in round 2. The attacker may retreat after round 1.
-6. Killing a **tier-3 unit or a Wildling gives 1 gold**; tier 1 and 2 give nothing.
+3. Both sides sort their results highest first and compare in pairs. Attack > defence: the defender takes 1 hit; otherwise the attacker takes 1 hit. **Spare dice are lost** (as in Risk).
+4. Hits land on the weakest units first: **tier 1, then siege engines, then tier 2, then tier 3**; within a group, the most wounded first.
+5. **Unlimited rounds (v3):** after every round the attacker chooses to **fight on** or **retreat**. The **Auto-fight** switch fights on until one side is gone (it stays on for later fights; switch it off at any time).
+6. Killing a **tier-3 unit or a Wildling gives 1 gold**.
 
-**Defence bonus:** mountains +1, standing in your own city +1, everything else +0 (plus the elves' forest bonuses). It is shown as a shield with a number next to each army.
+**Defence bonus:** mountains +1, own city +1, **own capital +2**, plus the elves' forest bonuses. A siege engine in the attacking army lowers the defenders' bonus by 1. It is shown as a shield next to each army.
 
 **HP:** damage stays after the fight. Units next to one of their own cities heal 1 HP at the start of their turn.
 
-## Gold, cities and sieges
-- Everything is paid in **gold**. Income per turn:
-  - plains +1, mountains +1, forest +½ (every 2 forests +1), desert 0;
-  - city +3, city next to the sea +4;
-  - each improvement level +1.
-  - **Evergarden is different:** only cities (+3/+4) and **+2 per enchanted forest** *(the amount is my choice; you left it open)*. Elves cannot improve hexes.
-- **Tier-3 limit:** each faction may have at most **2 tier-3 units + 1 per city** (Bone Colossi count).
-- **Improving a hex**: any own hex except cities, twice. Level 1 costs 3 gold, level 2 costs 6 (the same for every faction). Ready after 1 turn. When another player takes the hex, the improvement is destroyed and the conqueror gets 1 gold (2 for level 2).
+## Siege engines (v3)
+- Every faction can build them in its cities: **4 gold** (Giants **8**, as all their units cost double).
+- They travel with an army. When that army attacks, the defenders get **−1 defence** (several engines do not stack).
+- They never roll a die, have **1 HP**, no attack and no defence. They take hits **after all tier-1 units** and before tier 2. A side with only siege engines left takes a hit for every enemy die.
+
+## Gold and cities
+- Income per turn, **per region**: plains +1, mountains +1, forest +½ (every 2 forest regions +1), desert 0; city +3, city by the sea +4; each improvement level +1.
+  - **Evergarden:** only cities (+3/+4) and **+2 per enchanted forest region**. Elves cannot improve land.
+- **Tier-3 limit:** at most **2 tier-3 units + 1 per city** (Bone Colossi count).
+- **Improving** works on a **whole region** (v3): any own region without a city, twice. Level 1 costs 3 gold, level 2 costs 6. Ready after 1 turn. When another player takes the region, the improvement is destroyed and the conqueror gets 1 gold (2 for level 2).
 - Unit costs: tier 1 = **3**, tier 2 = **6**, tier 3 = **9** gold. **Giants pay double.**
 - **Recruiting** only happens in cities. Recruits join the garrison inside the city.
-- **Building a city**: an army on your own hex gives the order. Cost: 3 base units of your faction (9 gold, 18 for the Giants). Ready after 2 turns. *(Assumption: at least 2 hexes between cities, i.e. a distance of 3 or more.)*
-- **Upgrading a city**: costs 2 base units, takes 1 turn, max. level 3. Each level adds 1 round to sieges.
-- **Siege**: a city is captured once enemy armies have stood next to it for **3 rounds** (+1 per upgrade level).
-  - Counted at the start of the besieger's turn.
-  - The count continues as long as any army of that faction stands next to the city.
-  - If the last besieging army leaves or is destroyed, the siege ends.
-  - A garrison inside the city does **not** stop the count; besiegers may attack it. When the city falls, a garrison still inside is lost.
-  - Captured cities belong to the conqueror.
+- **Building a city**: an army on your own region gives the order. Cost: 3 base units (9 gold, 18 for the Giants). Ready after 2 turns, at least 2 regions away from other cities. New cities start at **level 1**.
+- **Upgrading a city**: costs 2 base units, takes 1 turn, max. level 3.
+
+## Attacking cities (v3)
+- Cities can no longer be taken by standing next to them. They must be **attacked**.
+- Each city can be attacked **at most 2 times per turn** (the counter resets at the start of every player's turn; a badge on the city shows it).
+- Every city has a **guard**: one unit of the city's faction, **tier = city level** (level 1 → tier 1, 2 → tier 2, 3 → tier 3). **Capitals have a guard one tier higher** *(balance choice)*. The guard only appears in fights against the city (as "City guard" in the dice tray), defends with the city bonus and is back at full HP in every new fight.
+- When the guard and all defending armies are beaten, the attacker chooses: **Take** the city (it changes hands) or **Raze** it for **3 gold per city level** *(assumption)*. Either way the attacking army moves into the region with no movement left.
 
 ## Victory
-- A faction is out when it has **no units** left and cannot recruit any (no city or not enough gold) *(assumption: a faction with a city and gold can still rebuild)*.
-- A faction is out after **3 rounds without a city**, or as soon as it can no longer get a city in time (no building site will finish, no siege will succeed, and it cannot afford and place a new city).
+- A faction is out when it has **no units** left and cannot recruit any (no city or not enough gold).
+- A faction is out after **3 rounds without a city**, or as soon as it can no longer get a city in time.
 - The last faction standing wins.
 
 ## Start
-- Capitals are placed randomly, as far apart as possible (no preferred terrain). Each faction starts with 1 city, an army next to it (3 base units and 1 tier-2 unit) and **10 gold**.
-- About every 4th hex (random, not next to a capital) holds a neutral army of **1–3 Wildlings** (attack +0, defence +1, 1 HP), one more in the mountains. Neutrals never attack.
+- Capitals are placed as far apart as possible in region steps. Each faction starts with 1 city, an army next to it (3 base units and 1 tier-2 unit) and **10 gold**.
+- Maps are a bit bigger than before (radius 7 / 8 / 9 hexes) so the regions have room.
+- About every 4th free region (not next to a capital) holds a neutral army of **1–3 Wildlings** (attack +0, defence +1, 1 HP). Neutrals never attack.
 
 ## Factions
 
 ### Death Cults (Necromancers)
-Any Death Cult army can **blight a forest** (own hex or adjacent) instead of attacking: moving through it costs only 1, elves lose all forest bonuses there and its enchantment is gone.
-**Passive:** after every fight they take part in, they roll 1d6 for each unit that died (friend or foe). Every **5 or 6** raises a skeleton in their army (v2.3: was 6 only). Never more skeletons than units died.
+Any Death Cult army can **blight a forest** (own region or adjacent) instead of attacking: moving through it costs only 1, elves lose all forest bonuses there and its enchantment is gone.
+**Passive:** after every fight they take part in, they roll 1d6 for each unit that died (friend or foe). Every **6** raises a skeleton in their army. **Two dead skeletons count as one fallen unit** (v3). Never more skeletons than counted deaths.
 
 | Tier | Unit | Attack | Defence | HP | Special |
 |---|---|---|---|---|---|
@@ -78,27 +82,29 @@ Any Death Cult army can **blight a forest** (own hex or adjacent) instead of att
 | 3 | Death Priest (undead bishop) | +1 | +1 | 2 | +3 raising rolls per priest in the fight; if fewer than 3 units died, 1 extra roll per fallen unit. Rolls with bone dice. |
 
 ### Evergarden (Elves)
-**Passive:** where an elven army ends its turn on plains or desert, forest grows at the start of their next turn (not within 2 hexes of an enemy city). +1 defence in healthy forests.
-**Blighted forests:** an elven army standing on one for a round heals it back to a normal forest; only then can a druid enchant it.
+**Passive:** +1 defence in healthy forests.
+**Growing forest (v3):** each Evergarden city can turn **one region per turn** into an **enchanted forest** (city panel → Grow enchanted forest). The region must be own land **next to that city's region** (range 1, a balance choice; range 2 made Evergarden win 48 %) and not next to a rival city. This also heals blighted forest. Forests no longer grow by themselves and druids no longer enchant.
 **Treants** are bought in a city but awaken in **any enchanted elven forest**; that forest turns into plains.
 
 | Tier | Unit | Attack | Defence | HP | Special |
 |---|---|---|---|---|---|
 | 1 | Elven Archer | +1 | +0 | 1 | |
-| 2 | Druid (mage with a wooden staff) | +1 | +1 | 2 | Enchants the healthy forest its army stands on (no movement cost). Enchanted forests give elves +1 defence and +2 gold per turn. Lost when the hex is captured; the forest stays. |
-| 3 | Treant (tree giant) | +2 | +4 | 2 | |
+| 2 | Druid (mage with a wooden staff) | +1 | +1 | 2 | Each turn heals 1 HP on the best wounded unit in its army (v3). |
+| 3 | Treant (tree giant) | +2 | +3 | 2 | v3: defence was +4. |
+
+Enchanted forests give elves +1 defence and +2 gold per turn. The enchantment is lost when the region is captured; the forest stays.
 
 ### Giants
 **Passive:** stronger units, but everything costs twice as much.
 
 | Tier | Unit | Attack | Defence | HP | Special |
 |---|---|---|---|---|---|
-| 1 | Iron Gut (giant with a huge club) | +1 | +1 | 2 | v2.3: attack was +2. |
-| 2 | Lead Belcher (giant with a ship's cannon) | +2 | +1 | 2 | On a natural 6 he fires again: 4+ wounds the weakest enemy before the exchange (a unit killed this way loses its die). Another 6 fires once more. The first 6 still counts normally *(assumption)*. |
-| 3 | Mammoth | +2 | +4 | 2 | At the start of its turn each mammoth heals 1 HP on the best wounded non-mammoth unit in its army. An army with a mammoth can **clear a forest** (own hex or adjacent) into plains instead of attacking. |
+| 1 | Iron Gut (giant with a huge club) | +2 | +0 | 2 | v3: defence −1; attack back to +2 *(balance choice)*. |
+| 2 | Lead Belcher (giant with a ship's cannon) | +2 | +0 | 2 | On a natural 6 he fires again: 4+ wounds the weakest enemy before the exchange (a unit killed this way loses its die). Another 6 fires once more. The first 6 still counts normally *(assumption)*. |
+| 3 | Mammoth | +2 | +4 | 2 | At the start of its turn each mammoth heals 1 HP on the best wounded non-mammoth unit in its army. An army with a mammoth can **clear a forest** (own region or adjacent) into plains instead of attacking. |
 
 ## Terraforming and attacks
-Clearing (mammoth) or blighting (Death Cults) uses the army's attack for the turn and costs 1 movement *(assumption)*. Targets: the army's own hex or a neighbour, even if enemies stand there.
+Clearing (mammoth) or blighting (Death Cults) uses the army's attack for the turn and costs 1 movement *(assumption)*. Targets: the army's own region or a neighbour, even if enemies stand there.
 
 ## Faction spells
 Every faction has one spell. It is ready after 3 of its own turns and recharges for 3 turns after each use.
@@ -107,7 +113,7 @@ Every faction has one spell. It is ready after 3 of its own turns and recharges 
 |---|---|---|
 | Death Cults | Bone Colossus | 3 skeletons of one army fuse into a Bone Colossus (tier 3: +3 / +1 / 3 HP *(stats are my choice)*). |
 | Evergarden | Arrow Rain | The archers of one army shoot an adjacent enemy army: every archer rolls, highest against highest, the enemy cannot hurt them. Does not use the army's attack *(assumption)*. |
-| Giants | Stone Wall | A wall on an empty hex next to a Giant army. Only Giants can enter it. Others can attack it: it rolls 1 die with +4, has **2 HP, +1 for every 10 rounds played** (3 HP from round 10, 4 from round 20…), never strikes back, and attacking it costs all remaining movement. |
+| Giants | Stone Wall | A wall on an empty region next to a Giant army. Only Giants can enter it. Others can attack it: it rolls 1 die with +4, has **2 HP, +1 for every 10 rounds played** (3 HP from round 10, 4 from round 20…), never strikes back, and attacking it costs all remaining movement. |
 
 ## Dwarf fortresses
 - Every map has **2 dwarf fortresses** on mountains, far from the capitals. Nobody can enter them.
@@ -134,7 +140,12 @@ Every faction has one spell. It is ready after 3 of its own turns and recharges 
 - Wins: Evergarden 38 %, Death Cults 37 %, Giants 21 %.
 - Raising on 5–6 lifted the Death Cults from about 12 % to 37 %. With Iron Gut at +1 and dwarves dearer for non-finders, the Giants are now the weakest AI faction.
 
+## Balance notes (AI against AI, 60 games, rules v3)
+- First v3 runs (no city guard bonus, raising on 5–6, Iron Gut +1): Death Cults 53 %, Evergarden 23 %, Giants 20 %, only **17 rounds** on average; capitals often fell in the first 5 rounds.
+- With capitals +2 defence and a guard one tier higher, raising on 6 only, Iron Gut attack +2, wiped-out sides no longer raising skeletons and forest growth range 1: **Death Cults 25 %, Evergarden 33 %, Giants 40 %**, about **21 rounds**.
+- Games are still shorter than the 25–35 target, mostly because the AI rushes capitals. Watch this with human players.
+
 ## Playtesting (v2.3)
 - The pause menu and the victory screen have a **Playtest report**: add notes, then copy it (or it downloads as a text file if the browser blocks the clipboard).
 - The report lists, per faction: result, income, bounty and loot, upkeep, gold spent on units and buildings, recruits, dwarves hired, units slain and lost, spells cast, forests changed, and peak units, cities and hexes.
-- Good things to watch with human players: does one tier-3 unit decide fights, are dwarves bought only as counters, does the stone wall stall games, do the Death Cults snowball with raising on 5–6?
+- Good things to watch with human players: does one tier-3 unit decide fights, are dwarves bought only as counters, does the stone wall stall games, do the Death Cults snowball? (v3: do capitals hold long enough, are siege engines worth 4 gold, is Auto-fight used?)

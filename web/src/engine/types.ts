@@ -40,12 +40,16 @@ export interface Army {
 }
 
 export interface City {
+  /** Anchor hex of the city's region. */
   tile: number;
   owner: FactionId;
+  /** 1..3; the hidden garrison has this tier. */
   level: number;
-  /** Rounds each faction has besieged this city without a break. */
-  siege: Partial<Record<FactionId, number>>;
   capital: boolean;
+  /** Attacks suffered since the start of the current player's turn (max 2). */
+  assaults: number;
+  /** Evergarden: this city already grew an enchanted forest this round. */
+  grew: boolean;
 }
 
 export interface Build {
@@ -55,19 +59,32 @@ export interface Build {
   turnsLeft: number;
 }
 
-/** A fight waiting for the attacker to choose round 2 or retreat. */
+/** A fight waiting for the attacker to fight another round or retreat. */
 export interface PendingFight {
   army: number;
   target: number;
-  /** Units killed so far (for the necromancers' rolls at the end). */
-  deaths: number;
+  round: number;
+  /** Fallen skeletons and other fallen units (two skeletons count as one for raising). */
+  skelDeaths: number;
+  otherDeaths: number;
   necroPriests: number;
+  /** Hidden city garrison, if the target is a city. */
+  garrison: Unit | null;
 }
 
+/** An enemy city has fallen: the attacker decides to take or raze it. */
+export interface PendingCity {
+  army: number;
+  city: number;
+}
+
+/** 2-4 hexes that act as one field. All its hexes share terrain and owner. */
 export interface Region {
   id: number;
   name: string;
   tiles: number[];
+  /** The hex where armies, cities and markers stand; also the region's id in actions. */
+  anchor: number;
 }
 
 export interface PlayerState {
@@ -112,7 +129,7 @@ export interface GameSetup {
 }
 
 export interface GameState {
-  version: 5;
+  version: 6;
   setup: GameSetup;
   rng: number;
   radius: number;
@@ -129,6 +146,7 @@ export interface GameState {
   winner: FactionId | null;
   actionCount: number;
   pendingFight: PendingFight | null;
+  pendingCity: PendingCity | null;
   fortresses: { tile: number; discovered: boolean; finder?: FactionId | null }[];
   walls: { tile: number; hp: number }[];
 }
@@ -144,8 +162,9 @@ export type Action =
   | { type: 'spell'; p: FactionId; army: number; target?: number }
   | { type: 'build'; p: FactionId; army: number }
   | { type: 'upgrade'; p: FactionId; city: number }
-  | { type: 'enchant'; p: FactionId; army: number }
+  | { type: 'grow'; p: FactionId; city: number; tile: number }
   | { type: 'improve'; p: FactionId; tile: number }
+  | { type: 'cityChoice'; p: FactionId; choice: 'take' | 'raze' }
   | { type: 'dismiss'; p: FactionId; army: number; units: number[] }
   | { type: 'fight'; p: FactionId; choice: 'continue' | 'retreat' }
   | { type: 'endTurn'; p: FactionId };
@@ -198,16 +217,18 @@ export interface CombatEvent {
   volley?: boolean;
   /** The defender is a Stone Wall. */
   wall?: boolean;
+  /** Id of the hidden city garrison among the defenders. */
+  garrison?: number;
   terrainBonus: string[];
   attackMods: string[];
-  round: 1 | 2;
-  /** True when the fight is over after this round (round 2, or a side was wiped out). */
+  round: number;
+  /** True when the fight is over after this round (a side was wiped out). */
   final: boolean;
   bounty: { att: number; def: number };
 }
 
 export type GameEvent =
-  | { type: 'moved'; p: FactionId; army: number; path: number[]; captured: number[]; forested: number[] }
+  | { type: 'moved'; p: FactionId; army: number; path: number[]; captured: number[] }
   | CombatEvent
   | { type: 'split'; p: FactionId; army: number; newArmy: number; tile: number }
   | { type: 'merged'; p: FactionId; army: number; tile: number }
@@ -219,15 +240,16 @@ export type GameEvent =
   | { type: 'dismissed'; p: FactionId; army: number; units: number; refund: number }
   | { type: 'upkeep'; p: FactionId; paid: number; unpaid: number; armies: number[] }
   | { type: 'pillaged'; p: FactionId; tile: number; gold: number }
-  | { type: 'terraformed'; p: FactionId; tile: number; to: 'plains' | 'corrupted' | 'forest' | 'cleansed' }
+  | { type: 'terraformed'; p: FactionId; tile: number; to: 'plains' | 'corrupted' }
   | { type: 'discovered'; p: FactionId; tile: number }
   | { type: 'hired'; p: FactionId; fortress: number; unit: UnitType; army: number }
   | { type: 'spellCast'; p: FactionId; spell: 'colossus' | 'volley' | 'wall'; army: number; tile: number }
   | { type: 'wallFallen'; p: FactionId; tile: number }
-  | { type: 'enchanted'; p: FactionId; tile: number }
-  | { type: 'healed'; p: FactionId; units: { army: number; unit: number; by: 'city' | 'mammoth' }[] }
-  | { type: 'siege'; p: FactionId; city: number; rounds: number; needed: number }
+  | { type: 'grown'; p: FactionId; tile: number; city: number }
+  | { type: 'healed'; p: FactionId; units: { army: number; unit: number; by: 'city' | 'mammoth' | 'druid' }[] }
+  | { type: 'cityFallen'; p: FactionId; city: number; from: FactionId }
   | { type: 'cityCaptured'; p: FactionId; city: number; from: FactionId }
+  | { type: 'cityRazed'; p: FactionId; city: number; from: FactionId; gold: number }
   | { type: 'eliminated'; p: FactionId; reason: 'units' | 'cities' }
   | { type: 'turn'; p: FactionId; turn: number; income: Income }
   | { type: 'victory'; p: FactionId };

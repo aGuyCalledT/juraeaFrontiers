@@ -104,7 +104,7 @@ function bezier(a: { x: number; y: number }, b: { x: number; y: number }, lift: 
 }
 
 /** Persistent aiming arrow between two hexes (attack / fortify preview). */
-export function showAim(board: Board, from: number, to: number | null, kind: 'attack' | 'move', f?: FactionId) {
+export function showAim(board: Board, from: number, to: number | null, kind: 'attack' | 'move' | 'blocked', f?: FactionId) {
   const layer = board.arrowLayer;
   layer.replaceChildren();
   if (to === null) return;
@@ -118,8 +118,18 @@ export function showAim(board: Board, from: number, to: number | null, kind: 'at
   const ha = Math.atan2(end.y - pre.y, end.x - pre.x);
   const head = [[6, 0], [-22, -16], [-22, 16]].map(([x, y]) => [end.x + x * Math.cos(ha) - y * Math.sin(ha), end.y + x * Math.sin(ha) + y * Math.cos(ha)]);
   const d = `M${s.x} ${s.y} Q${bz.mx} ${bz.my} ${end.x} ${end.y}`;
-  const color = kind === 'attack' ? (f ? FACTIONS[f].color : '#ff5a3c') : '#7fdc52';
-  layer.innerHTML = `<g class="aim aim-${kind}"><path d="${d}" stroke="${INK}" stroke-width="17" fill="none" stroke-linecap="round" opacity="0.35" transform="translate(0 10)"/><path d="${d}" stroke="${INK}" stroke-width="16" fill="none" stroke-linecap="round"/><path d="${d}" stroke="#fff4dc" stroke-width="10" fill="none" stroke-linecap="round"/><path class="aim-dash" d="${d}" stroke="${color}" stroke-width="8" fill="none" stroke-linecap="round" stroke-dasharray="14 12"/><polygon points="${head.map((p) => p.join(',')).join(' ')}" fill="${color}" stroke="${INK}" stroke-width="4" stroke-linejoin="round"/></g>`;
+  void f;
+  const color = kind === 'attack' ? ATTACK_RED : kind === 'blocked' ? '#9a9088' : '#7fdc52';
+  const mid = bz.at(0.5);
+  layer.innerHTML = `<g class="aim aim-${kind}"><path d="${d}" stroke="${INK}" stroke-width="17" fill="none" stroke-linecap="round" opacity="0.35" transform="translate(0 10)"/><path d="${d}" stroke="${INK}" stroke-width="16" fill="none" stroke-linecap="round"/><path d="${d}" stroke="#fff4dc" stroke-width="10" fill="none" stroke-linecap="round"/><path class="aim-dash" d="${d}" stroke="${color}" stroke-width="8" fill="none" stroke-linecap="round" stroke-dasharray="14 12"/><polygon points="${head.map((p) => p.join(',')).join(' ')}" fill="${color}" stroke="${INK}" stroke-width="4" stroke-linejoin="round"/>${kind === 'attack' ? swordsBadge(mid.x, mid.y) : kind === 'blocked' ? `<g transform="translate(${end.x.toFixed(1)} ${(end.y - 26).toFixed(1)})"><circle r="16" fill="#9a9088" stroke="${INK}" stroke-width="4"/><path d="M-6 -6 L6 6 M6 -6 L-6 6" stroke="#fff4dc" stroke-width="4.5" stroke-linecap="round"/></g>` : ''}</g>`;
+}
+
+const ATTACK_RED = '#e8412f';
+
+/** Crossed swords in a red disc: marks an attack. */
+export function swordsBadge(x: number, y: number, scale = 1): string {
+  const blade = (rot: number) => `<g transform="rotate(${rot})"><path d="M0 -17 L3 -13 L3 7 L-3 7 L-3 -13 Z" fill="#eef2f5" stroke="${INK}" stroke-width="2.6" stroke-linejoin="round"/><path d="M-8 7 L8 7" stroke="${INK}" stroke-width="5" stroke-linecap="round"/><path d="M-7 7 L7 7" stroke="#ffd23f" stroke-width="2.4" stroke-linecap="round"/><path d="M0 8 L0 15" stroke="${INK}" stroke-width="5" stroke-linecap="round"/><path d="M0 9 L0 14" stroke="#8a5a32" stroke-width="2.4" stroke-linecap="round"/></g>`;
+  return `<g class="aim-swords" transform="translate(${x.toFixed(1)} ${y.toFixed(1)}) scale(${scale})"><circle r="22" fill="${ATTACK_RED}" stroke="${INK}" stroke-width="4"/>${blade(-40)}${blade(40)}</g>`;
 }
 
 /** Dotted marching route with a movement-cost flag at the end. */

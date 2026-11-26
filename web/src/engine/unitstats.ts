@@ -5,7 +5,7 @@ export type UnitType =
   | 'archer' | 'druid' | 'treant'
   | 'irongut' | 'belcher' | 'mammoth'
   | 'runepriest' | 'woodcutter' | 'slayer'
-  | 'wildling' | 'wall';
+  | 'wildling' | 'wall' | 'siege';
 
 export interface UnitStats {
   type: UnitType;
@@ -19,6 +19,8 @@ export interface UnitStats {
   defense: number;
   hp: number;
   ability?: string;
+  /** Does not roll in fights (siege engines). */
+  noDice?: boolean;
 }
 
 export const UNIT_STATS: Record<UnitType, UnitStats> = {
@@ -31,15 +33,15 @@ export const UNIT_STATS: Record<UnitType, UnitStats> = {
   archer: { type: 'archer', name: 'Elven Archer', plural: 'Elven Archers', faction: 'elves', tier: 1, attack: 1, defense: 0, hp: 1 },
   druid: {
     type: 'druid', name: 'Druid', plural: 'Druids', faction: 'elves', tier: 2, attack: 1, defense: 1, hp: 2,
-    ability: 'Enchants the forest it stands on: +1 defence for elves there and +2 gold per turn.',
+    ability: 'Each turn, heals 1 HP on the best wounded unit in its army.',
   },
   treant: {
-    type: 'treant', name: 'Treant', plural: 'Treants', faction: 'elves', tier: 3, attack: 2, defense: 4, hp: 2,
+    type: 'treant', name: 'Treant', plural: 'Treants', faction: 'elves', tier: 3, attack: 2, defense: 3, hp: 2,
     ability: 'Awakens in any enchanted forest; the forest becomes plains.',
   },
-  irongut: { type: 'irongut', name: 'Iron Gut', plural: 'Iron Guts', faction: 'giants', tier: 1, attack: 1, defense: 1, hp: 2 },
+  irongut: { type: 'irongut', name: 'Iron Gut', plural: 'Iron Guts', faction: 'giants', tier: 1, attack: 2, defense: 0, hp: 2 },
   belcher: {
-    type: 'belcher', name: 'Lead Belcher', plural: 'Lead Belchers', faction: 'giants', tier: 2, attack: 2, defense: 1, hp: 2,
+    type: 'belcher', name: 'Lead Belcher', plural: 'Lead Belchers', faction: 'giants', tier: 2, attack: 2, defense: 0, hp: 2,
     ability: 'On a 6, fires again: 4+ wounds the weakest enemy before the fight; another 6 fires once more.',
   },
   mammoth: {
@@ -63,6 +65,10 @@ export const UNIT_STATS: Record<UnitType, UnitStats> = {
     ability: 'Dwarf mercenary. +2 attack and defence against the Giants.',
   },
   wildling: { type: 'wildling', name: 'Wildling', plural: 'Wildlings', faction: 'neutral', tier: 1, attack: 0, defense: 1, hp: 1 },
+  siege: {
+    type: 'siege', name: 'Siege Engine', plural: 'Siege Engines', faction: 'neutral', tier: 1, attack: 0, defense: 0, hp: 1, noDice: true,
+    ability: 'Travels with an army and lowers the defence of the region it attacks by 1 (several do not stack). Does not fight; takes hits after all tier-1 units.',
+  },
   wall: {
     type: 'wall', name: 'Stone Wall', plural: 'Stone Walls', faction: 'giants', tier: 1, attack: 0, defense: 4, hp: 2,
     ability: 'Blocks everyone but the Giants. Never strikes back; attacking it uses up all movement.',
@@ -73,7 +79,7 @@ export const DWARF_UNITS: UnitType[] = ['runepriest', 'woodcutter', 'slayer'];
 export const DWARF_COST = 6; // for the side that found the fortress
 export const DWARF_COST_OTHERS = 9;
 /** Tunable numbers for the necromancers' raising (kept in one object for balance runs). */
-export const RAISE = { on: 5, priestRolls: 3 };
+export const RAISE = { on: 6, priestRolls: 3 };
 export const SPELL_COOLDOWN = 3;
 export const ENCHANTED_GOLD = 2; // Evergarden: gold per enchanted forest
 export const WALL_HP = 2; // +1 for every 10 rounds played
@@ -97,6 +103,7 @@ export function unitCost(type: UnitType): number {
   const s = UNIT_STATS[type];
   if (s.faction === 'dwarves') return DWARF_COST;
   if (type === 'colossus' || type === 'wall') return 0;
+  if (type === 'siege') return SIEGE_COST;
   return TIER_COST[s.tier] * (s.faction === 'giants' ? 2 : 1);
 }
 
@@ -113,7 +120,7 @@ export function refund(type: UnitType): number {
 /** Gold for killing a unit: tier 3 units and wildlings give 1. */
 export function bounty(type: UnitType): number {
   const s = UNIT_STATS[type];
-  return (s.tier === 3 || s.faction === 'neutral') && type !== 'wall' ? 1 : 0;
+  return (s.tier === 3 || s.faction === 'neutral') && type !== 'wall' && type !== 'siege' ? 1 : 0;
 }
 
 export const IMPROVE_COST = [3, 6] as const; // level 1, level 2 (the same for everyone)
@@ -124,5 +131,20 @@ export const CITY_COST = (f: FactionId) => baseCost(f) * 3;
 export const UPGRADE_COST = (f: FactionId) => baseCost(f) * 2;
 export const MAX_CITY_LEVEL = 3;
 export const MOVE_POINTS = 3;
-export const SIEGE_ROUNDS = 3;
 export const NO_CITY_LIMIT = 3;
+
+/** Siege engines can be built by every faction. */
+export const SIEGE_COST = 4;
+export function siegeCost(f: FactionId): number { return SIEGE_COST * (f === 'giants' ? 2 : 1); }
+/** Order in which hits land: tier 1, then siege engines, then tier 2 and 3. */
+export function hitRank(type: UnitType): number { return type === 'siege' ? 1.5 : UNIT_STATS[type].tier; }
+/** Enemy attacks a city may suffer per round. */
+export const CITY_ASSAULTS = 2;
+/** Gold looted when razing a city, per level (level 0 counts as 1). */
+export const RAZE_GOLD = 3;
+/** Cities start at level 1; the garrison has the city's level as its tier. */
+export function garrisonTier(level: number, capital = false): 1 | 2 | 3 { return Math.max(1, Math.min(3, level + (capital ? CITY_TUNE.capitalGuard : 0))) as 1 | 2 | 3; }
+/** City defence numbers (one object so balance runs can change them). */
+export const CITY_TUNE = { cityDef: 1, capitalDef: 2, capitalGuard: 1 };
+/** Evergarden cities grow enchanted forest up to this many regions away (1 = neighbouring regions). */
+export const GROW_RANGE = 1;

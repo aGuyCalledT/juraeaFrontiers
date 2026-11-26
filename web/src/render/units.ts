@@ -478,6 +478,30 @@ ${shadow(34)}
   <path d="M46 34 L46 52" stroke="${K}" stroke-width="5" stroke-linecap="round"/><path d="M47 34 L66 40 L47 46 Z" fill="currentColor" ${o(3)}/>
 </g>`;
 
+// Siege engine: a covered battering ram on wheels, built by every faction.
+const siege = `
+${shadow(36)}
+<g class="u-rig">
+  <path d="M22 96 L98 96" stroke="${K}" stroke-width="10" stroke-linecap="round"/>
+  <path d="M22 96 L98 96" stroke="#7a4a26" stroke-width="5" stroke-linecap="round"/>
+  <path d="M28 94 L44 50 L76 50 L92 94" fill="none" stroke="${K}" stroke-width="9" stroke-linejoin="round" stroke-linecap="round"/>
+  <path d="M28 94 L44 50 L76 50 L92 94" fill="none" stroke="#9a6534" stroke-width="5" stroke-linejoin="round" stroke-linecap="round"/>
+  <path d="M36 52 L60 30 L84 52 Z" fill="#b97a3e" ${o()}/>
+  <path d="M42 50 L60 34 M50 51 L64 38 M60 51 L70 42 M70 51 L76 46" stroke="#8a5a2b" stroke-width="2.5" stroke-linecap="round"/>
+  <path d="M60 30 L60 14" stroke="${K}" stroke-width="5" stroke-linecap="round"/>
+  <path d="M61 14 L78 19 L61 25 Z" fill="currentColor" ${o(3)}/>
+  <path d="M50 52 L50 66 M70 52 L70 66" stroke="${K}" stroke-width="3" stroke-linecap="round"/>
+  <g class="u-weapon" style="transform-origin: 60px 60px">
+    <rect x="26" y="64" width="64" height="12" rx="6" fill="#8a5a2b" ${o()}/>
+    <path d="M32 68 L84 68" stroke="#a8743f" stroke-width="2.5" stroke-linecap="round"/>
+    <path d="M88 61 L104 63 L106 70 L104 77 L88 79 Z" fill="${IRON}" ${o()}/>
+    <path d="M92 64 L101 65" stroke="#c9ced3" stroke-width="2.5" stroke-linecap="round"/>
+  </g>
+  <circle cx="34" cy="98" r="11" fill="#9a6534" ${o()}/><circle cx="34" cy="98" r="3.5" fill="${K}"/>
+  <circle cx="86" cy="98" r="11" fill="#9a6534" ${o()}/><circle cx="86" cy="98" r="3.5" fill="${K}"/>
+  <path d="M34 89 L34 107 M25 98 L43 98 M86 89 L86 107 M77 98 L95 98" stroke="${K}" stroke-width="2.2" opacity=".6"/>
+</g>`;
+
 // ---------------------------------------------------------------- Neutral
 const wildling = `
 ${shadow(20)}
@@ -510,16 +534,16 @@ ${shadow(20)}
   </g>
 </g>`;
 
-const ART: Record<UnitId, string> = { skeleton, lich, priest, colossus, archer, druid, treant, irongut, belcher, mammoth, runepriest, woodcutter, slayer, wildling, wall };
+const ART: Record<UnitId, string> = { skeleton, lich, priest, colossus, archer, druid, treant, irongut, belcher, mammoth, runepriest, woodcutter, slayer, wildling, wall, siege };
 const STYLE: Record<UnitId, AttackStyle> = {
   skeleton: 'swing', lich: 'cast', priest: 'cast', colossus: 'swing', archer: 'shoot', druid: 'cast', treant: 'swing',
-  irongut: 'swing', belcher: 'cannon', mammoth: 'stomp', runepriest: 'cast', woodcutter: 'swing', slayer: 'swing', wildling: 'swing', wall: 'stomp',
+  irongut: 'swing', belcher: 'cannon', mammoth: 'stomp', runepriest: 'cast', woodcutter: 'swing', slayer: 'swing', wildling: 'swing', wall: 'stomp', siege: 'stomp',
 };
 /** Size relative to the 120px box. Giants tower over everyone, the mammoth most of all. */
 export const UNIT_SCALE: Record<UnitId, number> = {
   skeleton: 0.74, lich: 0.8, priest: 0.84, archer: 0.74, druid: 0.8, treant: 1.0,
   irongut: 1.08, belcher: 1.1, mammoth: 1.32, wildling: 0.74,
-  colossus: 1.12, runepriest: 0.66, woodcutter: 0.66, slayer: 0.66, wall: 0.95,
+  colossus: 1.12, runepriest: 0.66, woodcutter: 0.66, slayer: 0.66, wall: 0.95, siege: 0.86,
 };
 
 const scaled = (id: UnitId) => {
@@ -534,7 +558,7 @@ export const UNITS: Record<UnitId, UnitSprite> = Object.fromEntries(
   }),
 ) as Record<UnitId, UnitSprite>;
 
-export const UNIT_ORDER: UnitId[] = ['skeleton', 'lich', 'priest', 'colossus', 'archer', 'druid', 'treant', 'irongut', 'belcher', 'mammoth', 'runepriest', 'woodcutter', 'slayer', 'wildling', 'wall'];
+export const UNIT_ORDER: UnitId[] = ['skeleton', 'lich', 'priest', 'colossus', 'archer', 'druid', 'treant', 'irongut', 'belcher', 'mammoth', 'runepriest', 'woodcutter', 'slayer', 'siege', 'wildling', 'wall'];
 
 export const TRIM: Record<UnitSprite['faction'], string> = { necro: '#8e4fc4', elves: '#f0b928', giants: '#e0452f', neutral: '#b9a88f', dwarves: '#3e6fb3' };
 

@@ -1,20 +1,36 @@
 import { FACTIONS, NEUTRAL } from '../engine/factions';
-import { HEX_SIZE, SQRT3, hexCorners, hexToPixel, key } from '../engine/hex';
-import { neighbors } from '../engine/rules';
+import { DIRS, HEX_SIZE, SQRT3, hexCorners, hexToPixel, key } from '../engine/hex';
+import { hexNeighbors } from '../engine/rules';
 import type { GameState, Tile } from '../engine/types';
 import { BADGE_PATH, IMPROVEMENT_SYMBOL, INK, TERRAIN_COLORS, castleId, decorations, use } from './art';
 import { defenseBonus } from '../engine/rules';
-import type { Army, FactionId } from '../engine/types';
-import { ARMY_FREE_SIZE, UNIT_STATS } from '../engine/unitstats';
+import type { Army } from '../engine/types';
+import { ARMY_FREE_SIZE, CITY_ASSAULTS, UNIT_STATS } from '../engine/unitstats';
 
 const NS = 'http://www.w3.org/2000/svg';
 const pts = (p: [number, number][]) => p.map(([x, y]) => `${x.toFixed(1)},${y.toFixed(1)}`).join(' ');
 const THICK = 11;
 
+/** All ids passed to callbacks are region anchors (the hex that stands for its region). */
 export interface BoardCallbacks {
   onTileClick(id: number): void;
   onTileHover(id: number | null, clientX: number, clientY: number): void;
   onTileLongPress?(id: number, clientX: number, clientY: number): void;
+  /** Return true to drag an army out of this region instead of panning. */
+  onDragStart?(id: number): boolean;
+  onDragMove?(id: number | null, clientX: number, clientY: number): void;
+  onDrop?(id: number | null): void;
+}
+
+/** Path along the hex edges that face another region (or the sea), inset by `inset`. */
+function edgePath(cx: number, cy: number, size: number, edges: number[]): string {
+  const c = hexCorners(cx, cy, size);
+  return edges.map((e) => `M${c[e][0].toFixed(1)} ${c[e][1].toFixed(1)}L${c[(e + 1) % 6][0].toFixed(1)} ${c[(e + 1) % 6][1].toFixed(1)}`).join('');
+}
+/** Corner i sits at 60i-30 degrees, so edge i (corners i, i+1) faces 60i degrees. */
+function edgeOf(dq: number, dr: number): number {
+  const p = hexToPixel(dq, dr);
+  return ((Math.round(Math.atan2(p.y, p.x) / (Math.PI / 3)) % 6) + 6) % 6;
 }
 
 interface TileView {
@@ -44,7 +60,7 @@ export class Board {
   private fitZ = 1;
   private hovered: number | null = null;
   private pointers = new Map<number, { x: number; y: number }>();
-  private drag: { x: number; y: number; cx: number; cy: number; moved: boolean; dist?: number; z?: number } | null = null;
+  private drag: { x: number; y: number; cx: number; cy: number; moved: boolean; dist?: number; z?: number; army?: number } | null = null;
   private camAnim = 0;
   private longPress = 0;
   insets = { top: 80, bottom: 100, left: 12, right: 12 };
@@ -113,7 +129,7 @@ export class Board {
   }
 
   private buildSea(state: GameState) {
-    const nb = neighbors(state);
+    const nb = hexNeighbors(state);
     const shallow: string[] = [];
     const foam: string[] = [];
     const coast: string[] = [];
@@ -160,13 +176,23 @@ export class Board {
     g.setAttribute('class', 'tile');
     g.setAttribute('transform', `translate(${x.toFixed(1)} ${y.toFixed(1)})`);
     g.dataset.id = String(t.id);
+    // Only edges facing another region get an outline, so a region reads as one field.
+    const nb = hexNeighbors(this.state);
+    const edges: number[] = [];
+    for (const [dq, dr] of DIRS) {
+      const n = this.index.get(key(t.q + dq, t.r + dr));
+      if (n === undefined || this.state.tiles[n].region !== t.region) edges.push(edgeOf(dq, dr));
+    }
+    void nb;
     g.innerHTML = `<g class="tile-in">
       <polygon class="side" points="${pts(hexCorners(0, THICK, HEX_SIZE))}" stroke="${INK}" stroke-width="3" stroke-linejoin="round"/>
-      <polygon class="top" points="${pts(hexCorners(0, 0, HEX_SIZE))}" stroke="${INK}" stroke-width="3" stroke-linejoin="round"/>
-      <polygon class="rim" points="${pts(hexCorners(0, 0, HEX_SIZE - 5))}"/>
-      <polygon class="ring" points="${pts(hexCorners(0, 0, HEX_SIZE - 6))}"/>
+      <polygon class="top" points="${pts(hexCorners(0, 0, HEX_SIZE + 0.6))}" stroke-width="2" stroke-linejoin="round"/>
+      <path class="edge" d="${edgePath(0, 0, HEX_SIZE, edges)}" stroke="${INK}" stroke-width="3.5" stroke-linecap="round" fill="none"/>
+      <path class="rim" d="${edgePath(0, 0, HEX_SIZE - 5, edges)}"/>
+      <path class="ring" d="${edgePath(0, 0, HEX_SIZE - 6.5, edges)}"/>
       <g class="deco"></g><g class="build"></g><g class="units"></g>
-      <polygon class="state" points="${pts(hexCorners(0, 0, HEX_SIZE - 3))}"/>
+      <polygon class="state" points="${pts(hexCorners(0, 0, HEX_SIZE + 0.6))}"/>
+      <path class="state-edge" d="${edgePath(0, 0, HEX_SIZE - 3, edges)}"/>
     </g>`;
     this.layers.tiles.appendChild(g);
     const badge = document.createElementNS(NS, 'g');
@@ -189,6 +215,7 @@ export class Board {
     for (const t of state.tiles) {
       const v = this.views[t.id];
       if (!v) continue;
+      const isAnchor = state.regions[t.region]?.anchor === t.id;
       const armies = state.armies.filter((a) => a.tile === t.id);
       const city = state.cities.find((c) => c.tile === t.id);
       const build = state.builds.find((b) => b.tile === t.id);
@@ -203,6 +230,7 @@ export class Board {
       if (v.terrain !== decoKey) {
         v.terrain = decoKey;
         v.top.setAttribute('fill', `url(#g-${t.terrain})`);
+        v.top.setAttribute('stroke', `url(#g-${t.terrain})`);
         v.side.setAttribute('fill', `url(#gs-${t.terrain})`);
         v.g.classList.remove('t-plains', 't-forest', 't-mountain', 't-desert');
         v.g.classList.add('t-' + t.terrain);
@@ -225,11 +253,11 @@ export class Board {
       } else if (build?.kind === 'city') {
         b += use('s-scaffold', 0, -4, 54, `style="color:${FACTIONS[build.owner].color}"`);
       }
-      if (t.improved) {
+      if (t.improved && isAnchor) {
         b += use(IMPROVEMENT_SYMBOL[t.terrain] ?? 's-farm', 30, -14, 34);
         for (let i = 0; i < t.improved; i++) b += `<circle cx="${22 + i * 14}" cy="-8" r="5.5" fill="#ffd23f" stroke="${INK}" stroke-width="2.2"/>`;
       }
-      if (fac && !city && !build && !armies.length && !t.improved) b += use('s-flag', 34, -10, 30, `class="flag" style="color:${fac.color}"`);
+      if (fac && isAnchor && !city && !build && !armies.length && !t.improved) b += use('s-flag', 34, -10, 30, `class="flag" style="color:${fac.color}"`);
       v.build.innerHTML = b;
       v.units.innerHTML = '';
       // Armies and markers (drawn above all tiles).
@@ -238,8 +266,7 @@ export class Board {
       if (armies.length === 1) top += armyToken(armies[0], 0, 36, 1, armies[0].owner === cur, def);
       else if (armies.length === 2) top += armyToken(armies[0], -24, 30, 0.8, armies[0].owner === cur, def) + armyToken(armies[1], 24, 40, 0.8, armies[1].owner === cur, def);
       if (city) {
-        const sieges = Object.entries(city.siege).filter(([, n]) => n);
-        sieges.forEach(([f, n], i) => { top += siegeMarker(f as FactionId, n!, 3 + city.level, 0, -78 - i * 26); });
+        if (city.assaults) top += assaultMarker(city.assaults, CITY_ASSAULTS, 0, -78);
       }
       if (wall) {
         top += use('unit-wall', 0, 30, 84, 'style="color:#e0452f"');
@@ -267,12 +294,24 @@ export class Board {
     const selectable = new Set(marks.selectable ?? []);
     for (const v of this.views) {
       if (!v) continue;
-      const id = Number(v.g.dataset.id);
+      const id = this.anchor(Number(v.g.dataset.id));
       v.g.classList.toggle('is-sel', marks.selected === id);
       v.g.classList.toggle('is-target', targets.has(id));
       v.g.classList.toggle('is-source', selectable.has(id) && marks.selected !== id);
       v.g.classList.toggle('is-dim', !!marks.dimOthers && marks.selected !== id && !targets.has(id) && !selectable.has(id));
     }
+  }
+
+  /** The anchor hex of the region `id` belongs to. */
+  anchor(id: number): number {
+    const r = this.state?.regions[this.state.tiles[id]?.region ?? -1];
+    return r ? r.anchor : id;
+  }
+
+  /** Every hex of the region `id` belongs to. */
+  regionHexes(id: number): number[] {
+    const r = this.state?.regions[this.state.tiles[id]?.region ?? -1];
+    return r ? r.tiles : [id];
   }
 
   // ---------- Camera ----------
@@ -416,17 +455,18 @@ export class Board {
     return key(rx, rz);
   }
 
+  /** Region anchor under a screen point, or null over water. */
   tileAt(sx: number, sy: number): number | null {
     const p = this.screenToBoard(sx, sy);
     const id = this.index.get(this.pixelToKey(p.x, p.y));
     if (id === undefined || !this.state || this.state.tiles[id].terrain === 'water') return null;
-    return id;
+    return this.anchor(id);
   }
 
   private setHover(id: number | null, x: number, y: number) {
     if (id !== this.hovered) {
-      if (this.hovered !== null) this.views[this.hovered]?.g.classList.remove('is-hover');
-      if (id !== null) this.views[id]?.g.classList.add('is-hover');
+      if (this.hovered !== null) for (const h of this.regionHexes(this.hovered)) this.views[h]?.g.classList.remove('is-hover');
+      if (id !== null) for (const h of this.regionHexes(id)) this.views[h]?.g.classList.add('is-hover');
       this.hovered = id;
     }
     this.cb.onTileHover(id, x, y);
@@ -440,6 +480,8 @@ export class Board {
       cancelAnimationFrame(this.camAnim);
       if (this.pointers.size === 1) {
         this.drag = { x: e.clientX, y: e.clientY, cx: this.camera.x, cy: this.camera.y, moved: false };
+        const from = this.tileAt(e.clientX, e.clientY);
+        if (from !== null && this.cb.onDragStart?.(from)) this.drag.army = from;
         if (e.pointerType === 'touch') {
           clearTimeout(this.longPress);
           this.longPress = window.setTimeout(() => {
@@ -450,6 +492,8 @@ export class Board {
           }, 480);
         }
       } else if (this.pointers.size === 2) {
+        if (this.drag?.army !== undefined && this.drag.moved) this.cb.onDrop?.(null);
+        svg.classList.remove('army-drag');
         const [a, b] = [...this.pointers.values()];
         this.drag = { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2, cx: this.camera.x, cy: this.camera.y, moved: true, dist: Math.hypot(a.x - b.x, a.y - b.y), z: this.camera.z };
       }
@@ -477,6 +521,16 @@ export class Board {
         return;
       }
       const dx = e.clientX - d.x, dy = e.clientY - d.y;
+      if (d.army !== undefined) {
+        // Dragging an army: report the region under the pointer.
+        if (!d.moved && Math.hypot(dx, dy) > 7) { d.moved = true; clearTimeout(this.longPress); svg.classList.add('army-drag'); }
+        if (d.moved) {
+          const over = this.tileAt(e.clientX, e.clientY);
+          this.setHover(over, e.clientX, e.clientY);
+          this.cb.onDragMove?.(over, e.clientX, e.clientY);
+        }
+        return;
+      }
       if (!d.moved && Math.hypot(dx, dy) > 7) { d.moved = true; svg.classList.add('dragging'); }
       if (d.moved) {
         this.camera.x = d.cx - dx / this.camera.z;
@@ -491,7 +545,12 @@ export class Board {
       if (!had) return;
       const d = this.drag;
       if (this.pointers.size === 0) {
-        svg.classList.remove('dragging');
+        svg.classList.remove('dragging', 'army-drag');
+        if (d && d.army !== undefined && d.moved) {
+          this.cb.onDrop?.(e.type === 'pointerup' ? this.tileAt(e.clientX, e.clientY) : null);
+          this.drag = null;
+          return;
+        }
         if (d && !d.moved && e.type === 'pointerup') {
           const id = this.tileAt(e.clientX, e.clientY);
           if (id !== null) this.cb.onTileClick(id);
@@ -499,6 +558,7 @@ export class Board {
         }
         this.drag = null;
       } else if (this.pointers.size === 1) {
+        if (d?.army !== undefined && d.moved) this.cb.onDrop?.(null);
         const [p] = [...this.pointers.values()];
         this.drag = { x: p.x, y: p.y, cx: this.camera.x, cy: this.camera.y, moved: true };
       }
@@ -545,11 +605,10 @@ export function armyToken(a: Army, x: number, y: number, k: number, active: bool
   </g>`;
 }
 
-function siegeMarker(f: FactionId, n: number, need: number, x: number, y: number): string {
-  const col = FACTIONS[f].color;
-  return `<g class="siege" transform="translate(${x} ${y})"><rect x="-30" y="-12" width="60" height="24" rx="8" fill="${col}" stroke="${INK}" stroke-width="3"/>
+function assaultMarker(n: number, max: number, x: number, y: number): string {
+  return `<g class="siege" transform="translate(${x} ${y})"><title>Attacked ${n} of ${max} times this round</title><rect x="-30" y="-12" width="60" height="24" rx="8" fill="${n >= max ? '#e8412f' : '#f3a33a'}" stroke="${INK}" stroke-width="3"/>
     <path d="M-23 7 L-11 -6 M-11 7 L-23 -6" stroke="${INK}" stroke-width="5" stroke-linecap="round"/><path d="M-23 7 L-11 -6 M-11 7 L-23 -6" stroke="#eef2f5" stroke-width="2.4" stroke-linecap="round"/>
-    <text class="badge-text small" x="9" y="6" text-anchor="middle">${n}/${need}</text></g>`;
+    <text class="badge-text small" x="9" y="6" text-anchor="middle">${n}/${max}</text></g>`;
 }
 
 function buildMarker(kind: 'city' | 'upgrade' | 'improve', left: number, x: number, y: number): string {
