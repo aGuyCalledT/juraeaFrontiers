@@ -870,6 +870,7 @@ input::placeholder { color: rgba(43, 29, 20, 0.62); }
 .broll .btotal { font-size: 20px; color: var(--gold); min-width: 1.2ch; text-align: center; }
 .broll.landed { animation: land 0.3s var(--bounce); }
 .broll.six .bdie { color: var(--gold); }
+.broll.rerolled { box-shadow: 0 0 0 3px #7ff0ff; border-radius: 10px; }
 .broll.won { transform: scale(1.12); box-shadow: inset 0 -3px 0 var(--die-dark), 0 0 0 3px var(--gold); }
 .broll.lost { filter: grayscale(0.8) brightness(0.75); }
 .bmid { display: flex; align-items: center; justify-content: center; gap: 2px; font: 400 13px/1 var(--display); color: #d6f3c8; }

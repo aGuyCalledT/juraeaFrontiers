@@ -113,12 +113,31 @@ export class DiceTray {
     for (const d of allDice) {
       const c = this.cells.get(d.unit);
       if (!c) continue;
-      c.roll.querySelector('.bdie')!.textContent = String(d.roll);
-      c.roll.querySelector('.btotal')!.textContent = String(d.total);
+      const first = d.rerolled?.[0] ?? d.roll;
+      c.roll.querySelector('.bdie')!.textContent = String(first);
+      c.roll.querySelector('.btotal')!.textContent = String(first + d.bonus);
       c.roll.classList.add('landed');
-      if (d.roll === 6) c.roll.classList.add('six');
+      if (first === 6) c.roll.classList.add('six');
     }
     await this.w(450);
+
+    // Rune Priests reroll the worst die of their side.
+    for (const d of [...ev.attDice, ...ev.defDice].filter((x) => x.rerolled?.length)) {
+      const c = this.cells.get(d.unit);
+      const by = d.rerollBy !== undefined ? this.cells.get(d.rerollBy) : undefined;
+      if (by) void playUnit(by.sprite, 'attack');
+      say(`Rune Priest rerolls the worst die: ${d.rerolled!.join(' → ')} → ${d.roll}.`);
+      if (c) {
+        c.roll.classList.remove('six', 'landed');
+        if (!motion.reduced) for (let i = 0; i < 5; i++) { c.roll.querySelector('.bdie')!.textContent = String(rnd()); await this.w(55); }
+        c.roll.querySelector('.bdie')!.textContent = String(d.roll);
+        c.roll.querySelector('.btotal')!.textContent = String(d.total);
+        c.roll.classList.add('landed', 'rerolled');
+        if (d.roll === 6) c.roll.classList.add('six');
+      }
+      sfx.dice();
+      await this.w(520);
+    }
 
     // Cannon shots before the exchange.
     const shots = this.el.querySelector('.bshots') as HTMLElement;
@@ -127,7 +146,10 @@ export class DiceTray {
       if (c) void playUnit(c.sprite, 'attack');
       sfx.thud();
       const victims = shot.hits.map((h) => (uA.get(h) ?? uD.get(h))).filter(Boolean) as Unit[];
-      shots.insertAdjacentHTML('beforeend', `<div class="bshot">Lead Belcher rolled a 6! Cannon: ${shot.rolls.map((r) => `<b class="${r >= 4 ? 'hit' : ''}">${r}</b>`).join(' ')} ${victims.length ? `· hits ${victims.map((v) => UNIT_STATS[v.type].name).join(', ')}` : '· missed'}</div>`);
+      const hitText = victims.length ? `hits ${victims.map((v) => UNIT_STATS[v.type].name).join(', ')}` : 'nobody left to hit';
+      shots.insertAdjacentHTML('beforeend', shot.kind === 'thunder'
+        ? `<div class="bshot">Thunderer opens fire: ${hitText}.</div>`
+        : `<div class="bshot">Lead Belcher rolled a 6! Cannon: ${shot.rolls.map((r) => `<b class="${r >= 4 ? 'hit' : ''}">${r}</b>`).join(' ')} ${victims.length ? `· ${hitText}` : '· missed'}</div>`);
       for (const h of shot.hits) { await this.w(260); this.hurt(h); sfx.hit(); }
       await this.w(350);
     }

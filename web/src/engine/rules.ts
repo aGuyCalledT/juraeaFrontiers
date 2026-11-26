@@ -7,7 +7,7 @@ import type {
 } from './types';
 import {
   ARMY_FREE_SIZE, CITY_ASSAULTS, CITY_COST, DWARF_UNITS, FACTION_UNITS, GROW_RANGE, IMPROVE_COST, MAX_CITY_LEVEL, MAX_IMPROVE, MOVE_POINTS, NO_CITY_LIMIT,
-  ENCHANTED_GOLD, RAZE_GOLD, SPELL_COOLDOWN, START_GOLD, UNIT_STATS, UPGRADE_COST, DWARF_COST, DWARF_COST_OTHERS, RAISE, CITY_TUNE, garrisonTier, hitRank,
+  ENCHANTED_GOLD, RAZE_GOLD, SPELL_COOLDOWN, START_GOLD, UNIT_STATS, UPGRADE_COST, DWARF_MOUNTAIN_COST, dwarfCost, RAISE, CITY_TUNE, garrisonTier, hitRank,
   siegeCost, wallHp, baseCost, bounty, refund, unitCost, type UnitType,
 } from './unitstats';
 
@@ -91,9 +91,13 @@ export function emptyStats(): PlayerStats {
 
 export function fortressAt(s: GameState, tile: number) { return s.fortresses.find((f) => f.tile === tile); }
 /** Dwarves are cheaper for the side that found their fortress. */
-export function hireCost(s: GameState, fortress: number, f: FactionId): number {
+export function hireCost(s: GameState, fortress: number, f: FactionId, unit: UnitType = 'axedwarf'): number {
   const fo = fortressAt(s, fortress);
-  return fo?.finder === f ? DWARF_COST : DWARF_COST_OTHERS;
+  return dwarfCost(unit, fo?.finder === f);
+}
+/** An army made only of dwarves crosses mountains faster and can climb high peaks. */
+export function isDwarfArmy(a: Army | undefined): boolean {
+  return !!a && a.units.length > 0 && a.units.every((u) => UNIT_STATS[u.type].faction === 'dwarves');
 }
 /** What a city of faction `f` charges for a unit. */
 export function recruitCost(f: FactionId, u: UnitType): number { return u === 'siege' ? siegeCost(f) : unitCost(u); }
@@ -123,13 +127,14 @@ const fights = (u: Unit) => !UNIT_STATS[u.type].noDice;
 /** Cost for an army of `owner` to step onto `tile`, or Infinity if it cannot go there. */
 export function stepCost(s: GameState, owner: Owner, tile: number, movingArmy?: number): number {
   const t = s.tiles[tile];
-  if (IMPASSABLE(t) || fortressAt(s, tile)) return Infinity;
+  const dwarves = movingArmy !== undefined && isDwarfArmy(armyById(s, movingArmy));
+  if ((IMPASSABLE(t) && !(dwarves && t.terrain === 'peak')) || fortressAt(s, tile)) return Infinity;
   if (wallAt(s, tile) && owner !== 'giants') return Infinity;
   const city = cityAt(s, tile);
   if (city && city.owner !== owner) return Infinity;
   const here = armiesAt(s, tile).filter((a) => a.id !== movingArmy);
   if (here.some((a) => a.owner !== owner)) return Infinity;
-  const base = t.corrupted ? 1 : TERRAIN_COST[t.terrain];
+  const base = t.corrupted ? 1 : dwarves && (t.terrain === 'mountain' || t.terrain === 'peak') ? DWARF_MOUNTAIN_COST : TERRAIN_COST[t.terrain];
   return here.length ? Math.max(1, base - 1) : base;
 }
 
@@ -217,7 +222,7 @@ export function computeIncome(s: GameState, f: FactionId): Income {
 export function defenseBonus(s: GameState, tile: Tile, owner: Owner): { total: number; labels: string[] } {
   const labels: string[] = [];
   let total = 0;
-  if (tile.terrain === 'mountain') { total += 1; labels.push('Mountain +1'); }
+  if (tile.terrain === 'mountain' || tile.terrain === 'peak') { total += 1; labels.push('Mountain +1'); }
   const city = cityAt(s, anchorOf(s, tile.id));
   if (city && city.owner === owner) {
     const d = city.capital ? CITY_TUNE.capitalDef : CITY_TUNE.cityDef;
@@ -243,7 +248,7 @@ export function createGame(setup: GameSetup): { state: GameState; events: GameEv
     alive: true, gold: START_GOLD, noCity: 0, kills: 0, spell: SPELL_COOLDOWN, stats: emptyStats(),
   }));
   const state: GameState = {
-    version: 6, setup, rng: setup.seed, radius: map.radius, tiles: map.tiles, regions: map.regions, armies: map.armies,
+    version: 7, setup, rng: setup.seed, radius: map.radius, tiles: map.tiles, regions: map.regions, armies: map.armies,
     cities: map.cities, builds: [], players, current: 0, phase: 'play', turn: 1, nextId: map.nextId, winner: null,
     actionCount: 0, pendingFight: null, pendingCity: null, fortresses: map.fortresses, walls: [],
   };
@@ -277,7 +282,7 @@ export function validate(s: GameState, a: Action): string | null {
         if (!nb[at].includes(t)) return 'You can only march to neighbouring regions.';
         const c = stepCost(s, f, t, ar.id);
         if (!isFinite(c)) {
-          if (s.tiles[t].terrain === 'peak') return 'High peaks cannot be crossed.';
+          if (s.tiles[t].terrain === 'peak') return 'Only an army of dwarves alone can climb high peaks.';
           return cityAt(s, t) ? 'Attack an enemy city to take it.' : 'That region is blocked.';
         }
         cost += c;
@@ -335,7 +340,8 @@ export function validate(s: GameState, a: Action): string | null {
       if (!DWARF_UNITS.includes(a.unit)) return 'The dwarves do not offer that.';
       const ar = myArmy(a.army);
       if (!ar || !neighbors(s)[a.fortress].includes(ar.tile)) return 'An army must stand next to the fortress.';
-      if (p.gold < hireCost(s, a.fortress, f)) return 'Not enough gold.';
+      if (p.gold < hireCost(s, a.fortress, f, a.unit)) return 'Not enough gold.';
+      if (UNIT_STATS[a.unit].tier === 3 && tier3Count(s, f) >= tier3Limit(s, f)) return 'Tier-3 limit reached.';
       return null;
     }
     case 'terraform': {
@@ -545,7 +551,7 @@ export function applyAction(prev: GameState, a: Action): { state: GameState; eve
       break;
     }
     case 'hire': {
-      p.gold -= hireCost(s, a.fortress, f);
+      p.gold -= hireCost(s, a.fortress, f, a.unit);
       const ar = armyById(s, a.army)!;
       ar.units.push({ id: s.nextId++, type: a.unit, hp: UNIT_STATS[a.unit].hp });
       events.push({ type: 'hired', p: f, fortress: a.fortress, unit: a.unit, army: ar.id });
@@ -660,13 +666,36 @@ function discover(s: GameState, tile: number, f: Owner, events: GameEvent[]) {
 }
 
 // ------------------------------------------------------------------ combat
-function rollSide(rng: Rng, units: Unit[], side: 'att' | 'def', bonus: number, foe: Owner): CombatDie[] {
+function rollSide(rng: Rng, units: Unit[], side: 'att' | 'def', bonus: number, _foe: Owner): CombatDie[] {
   return units.filter(fights).map((u) => {
     const st = UNIT_STATS[u.type];
     const roll = 1 + rng.int(6);
-    const b = (side === 'att' ? st.attack : st.defense) + bonus + (st.counters && st.counters === foe ? 2 : 0);
+    const b = (side === 'att' ? st.attack : st.defense) + bonus;
     return { unit: u.id, type: u.type, roll, bonus: b, total: roll + b };
   });
+}
+
+/** Rune Priests: each rerolls the worst die of its side (the new roll counts). */
+function runeRerolls(rng: Rng, dice: CombatDie[]) {
+  for (const p of dice.filter((d) => d.type === 'runepriest')) {
+    const worst = dice.filter((d) => !d.void).sort((x, y) => x.total - y.total || x.roll - y.roll)[0];
+    if (!worst) continue;
+    worst.rerolled = [...(worst.rerolled ?? []), worst.roll];
+    worst.rerollBy = p.unit;
+    worst.roll = 1 + rng.int(6);
+    worst.total = worst.roll + worst.bonus;
+  }
+}
+
+/** Thunderers fire once before the first exchange and always wound the weakest enemy. */
+function thunder(ev: CombatEvent, attUnits: Unit[], defUnits: Unit[], dead: Set<number>) {
+  for (const [side, own, foes] of [['att', attUnits, defUnits], ['def', defUnits, attUnits]] as const) {
+    for (const u of own.filter((x) => x.type === 'thunderer')) {
+      const v = wound(foes, dead);
+      ev.shots.push({ side, shooter: u.id, rolls: [], hits: v >= 0 ? [v] : [], kind: 'thunder' });
+    }
+  }
+  for (const d of [...ev.attDice, ...ev.defDice]) if (dead.has(d.unit)) d.void = true;
 }
 
 /** Lead Belchers, attacking or defending: a natural 6 fires an extra shot before the exchange. */
@@ -727,7 +756,9 @@ function fightRound(s: GameState, rng: Rng, events: GameEvent[]) {
   ev.attDice = rollSide(rng, attUnits, 'att', attMorale, defOwner);
   ev.defDice = rollSide(rng, defUnits, 'def', db.total + defMorale, att.owner);
   const dead = new Set<number>();
-
+  runeRerolls(rng, ev.attDice);
+  runeRerolls(rng, ev.defDice);
+  if (pf.round === 1) thunder(ev, attUnits, defUnits, dead);
   cannons(rng, ev, attUnits, defUnits, dead);
 
   // Best against best; spare dice are lost. A side without dice is hit by every enemy die.

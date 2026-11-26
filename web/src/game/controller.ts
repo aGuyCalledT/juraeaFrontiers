@@ -525,6 +525,7 @@ export class GameController {
 
   /** Clicks only select. Armies march and attack by drag and drop. */
   private onTileClick(id: number) {
+    this.dragArmy = null;
     if (!this.controlsCurrent() || this.busy) {
       if (id >= 0) this.showTooltip(id, 0, 0, true);
       return;
@@ -562,8 +563,8 @@ export class GameController {
       const idx = sel ? mine.findIndex((a) => a.id === sel.id) : -1;
       if (idx >= 0 && idx < mine.length - 1) this.selectArmy(mine[idx + 1].id);
       else if (idx >= 0 && city && city.owner === f) this.selectCity(id);
-      else if (idx >= 0) this.cancel();
-      else this.selectArmy(mine[0].id);
+      else if (idx >= 0 && mine.length > 1) this.selectArmy(mine[0].id);
+      else if (idx < 0) this.selectArmy(mine[0].id);
       return;
     }
     if (city && city.owner === f) { this.selectCity(id); return; }
@@ -588,13 +589,14 @@ export class GameController {
     const mine = this.myArmiesAt(id);
     if (!mine.length) return false;
     const ar = mine.find((a) => a.id === this.selArmy) ?? mine.find((a) => a.mp > 0) ?? mine[0];
+    // Select only once the pointer really moves: a plain click is handled by onTileClick.
     this.dragArmy = ar.id;
-    if (this.selArmy !== ar.id) this.selectArmy(ar.id);
     return true;
   }
 
   private dragMove(id: number | null, x: number, y: number) {
     const ar = this.dragArmy !== null ? armyById(this.state, this.dragArmy) : undefined;
+    if (ar && this.selArmy !== ar.id) this.selectArmy(ar.id);
     this.hideTooltip();
     if (!ar || id === null || id === ar.tile) { fx.clearAim(this.board); return; }
     if (attackTargets(this.state, ar).includes(id)) {
@@ -929,11 +931,12 @@ export class GameController {
       const fo = this.selFort;
       const next = ownArmies(s, f).find((x) => neighbors(s)[fo].includes(x.tile));
       const finder = fortressAt(s, fo)?.finder ?? null;
-      box.innerHTML = `<div class="cmd-head"><b>Dwarf fortress</b><span>Mercenaries join an army standing next to the fortress. ${finder === f ? 'You found it: 6 gold each.' : `${finder ? FACTIONS[finder].short + ' found it, so you pay' : 'You pay'} 9 gold.`}${next ? '' : ' <em class="warn">Move an army next to it first.</em>'}</span>${close}</div>
+      box.innerHTML = `<div class="cmd-head"><b>Dwarf fortress</b><span>Mercenaries join an army standing next to the fortress. ${finder === f ? 'You found it: normal prices.' : `${finder ? FACTIONS[finder].short + ' found it, so you' : 'You'} pay half again.`} An army of dwarves alone crosses mountains for 2 and can climb high peaks.${next ? '' : ' <em class="warn">Move an army next to it first.</em>'}</span>${close}</div>
         <div class="recruits">${DWARF_UNITS.map((u) => {
           const st = UNIT_STATS[u];
-          const cost = hireCost(s, fo, f);
-          return `<button class="rcard" data-cmd="hire" data-unit="${u}" ${!next || p.gold < cost ? 'disabled' : ''} title="${esc(st.ability ?? '')}">${unitSvg(u)}<b>${st.name}</b><span class="rstats">+2/+2 vs ${FACTIONS[st.counters!].short}</span><span class="card-cost">${ICONS.gold}${cost}</span></button>`;
+          const cost = hireCost(s, fo, f, u);
+          const capped = st.tier === 3 && tier3Count(s, f) >= tier3Limit(s, f);
+          return `<button class="rcard" data-cmd="hire" data-unit="${u}" ${!next || p.gold < cost || capped ? 'disabled' : ''} title="${capped ? 'Tier-3 limit reached.' : esc(st.ability ?? '')}">${unitSvg(u)}<b>${st.name}</b><span class="rstats">T${st.tier} · ATK +${st.attack} · DEF +${st.defense} · HP ${st.hp}</span><span class="card-cost">${ICONS.gold}${cost}</span></button>`;
         }).join('')}</div>`;
       return;
     }
@@ -1009,7 +1012,7 @@ export class GameController {
     const card = this.openModal(`
       <div class="unit-hero ${u.hp < st.hp ? 'hurt' : ''}">${unitSvg(u.type, 'idle')}</div>
       <h2>${st.name}</h2>
-      <p class="sub">${fac ? fac.short : st.faction === 'dwarves' ? 'Dwarf mercenary' : 'Wildlands'} · tier ${st.tier}${st.counters ? ` · counters ${FACTIONS[st.counters].short}` : ''}</p>
+      <p class="sub">${fac ? fac.short : st.faction === 'dwarves' ? 'Dwarf mercenary' : 'Wildlands'} · tier ${st.tier}</p>
       <dl class="unit-stats">
         <div><dt>Attack</dt><dd>+${st.attack}</dd></div>
         <div><dt>Defence</dt><dd>+${st.defense}</dd></div>
