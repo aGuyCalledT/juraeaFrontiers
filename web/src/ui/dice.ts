@@ -47,9 +47,10 @@ export class DiceTray {
     const st = UNIT_STATS[u.type];
     const bone = u.type === 'priest' ? ' bone' : '';
     const c = colours(o);
-    return `<div class="bcell ${right ? 'right' : ''}" data-cell="${u.id}">
+    const garrison = u.id <= -1000000;
+    return `<div class="bcell ${right ? 'right' : ''} ${garrison ? 'garrison' : ''}" data-cell="${u.id}">
       ${portrait(u)}
-      <span class="bname">${st.name}</span>
+      <span class="bname">${garrison ? `City guard · ${st.name}` : st.name}</span>
       ${d ? `<span class="broll${bone}" style="--die:${c.c};--die-dark:${c.d}"><b class="bdie">${rnd()}</b><span class="bmod">${sign(d.bonus)}</span><span class="beq">=</span><b class="btotal">?</b></span>` : '<span class="broll none">no die</span>'}
     </div>`;
   }
@@ -83,7 +84,7 @@ export class DiceTray {
     this.el.innerHTML = `
       <div class="bhead">
         <div class="bteam" style="--c:${ca.c}"><b>${names.att}</b><span>attacks${ev.attackMods.length ? ' · ' + ev.attackMods.join(', ') : ''}</span></div>
-        <div class="bround">Round ${ev.round} of 2</div>
+        <div class="bround">Round ${ev.round}</div>
         <div class="bteam right" style="--c:${cd.c}"><b>${names.def}</b><span>${ev.terrainBonus.length ? ev.terrainBonus.join(', ') : 'no defence bonus'}</span></div>
       </div>
       <div class="bshots"></div>
@@ -102,7 +103,7 @@ export class DiceTray {
     await this.w(motion.reduced ? 0 : 280);
 
     // Roll: numbers tumble, then settle with their modifiers added.
-    say(`Every unit rolls a die and adds its ${ev.round === 1 ? 'attack or defence' : 'bonus'}.`);
+    say(ev.garrison !== undefined && ev.round === 1 ? 'The city guard joins the defenders. Every unit rolls a die and adds its bonus.' : `Every unit rolls a die and adds its ${ev.round === 1 ? 'attack or defence' : 'bonus'}.`);
     sfx.dice();
     const allDice = [...ev.attDice, ...ev.defDice].filter((d) => !d.void);
     if (!motion.reduced) for (let i = 0; i < 7; i++) {
@@ -167,14 +168,54 @@ export class DiceTray {
     if (c.hp <= 0) setTimeout(() => c.el.classList.add('dead'), 300);
   }
 
-  /** Attacker's choice after round 1. */
-  ask(): Promise<'continue' | 'retreat'> {
+  /** Fight every round to the end without asking. Remembered per browser. */
+  get autoFight(): boolean {
+    try { return localStorage.getItem('jf-autofight') === '1'; } catch { return false; }
+  }
+
+  set autoFight(on: boolean) {
+    try { localStorage.setItem('jf-autofight', on ? '1' : '0'); } catch { /* storage unavailable */ }
+  }
+
+  /** Attacker's choice after each round: fight on, retreat, or switch on auto-fight. */
+  ask(nextRound: number): Promise<'continue' | 'retreat'> {
     const box = this.el.querySelector('.bchoice') as HTMLElement;
     this.el.classList.add('open');
-    box.innerHTML = `<button class="btn ghost small b-retreat">Retreat</button><button class="btn go b-fight">${ICONS.sword}Fight round 2</button>`;
+    box.innerHTML = `<button class="btn ghost small b-retreat">Retreat</button>
+      <button class="btn go b-fight">${ICONS.sword}Fight round ${nextRound}</button>
+      <button class="toggle b-auto" role="switch" aria-checked="false" title="Fight every round until one side is gone"><span class="toggle-knob"></span>Auto-fight</button>`;
     return new Promise((resolve) => {
-      box.querySelector('.b-fight')!.addEventListener('click', () => { box.innerHTML = ''; resolve('continue'); });
-      box.querySelector('.b-retreat')!.addEventListener('click', () => { box.innerHTML = ''; resolve('retreat'); });
+      const done = (c: 'continue' | 'retreat') => { box.innerHTML = ''; resolve(c); };
+      box.querySelector('.b-fight')!.addEventListener('click', () => done('continue'));
+      box.querySelector('.b-retreat')!.addEventListener('click', () => done('retreat'));
+      box.querySelector('.b-auto')!.addEventListener('click', () => { this.autoFight = true; done('continue'); });
+    });
+  }
+
+  /** A small switch shown during auto-fights to stop them. */
+  showAutoSwitch(onStop: () => void) {
+    const box = this.el.querySelector('.bchoice') as HTMLElement | null;
+    if (!box) return;
+    box.innerHTML = `<button class="toggle on b-auto" role="switch" aria-checked="true" title="Stop auto-fight and decide after each round"><span class="toggle-knob"></span>Auto-fight</button>`;
+    box.querySelector('.b-auto')!.addEventListener('click', (e) => {
+      const b = e.currentTarget as HTMLElement;
+      this.autoFight = false;
+      b.classList.remove('on');
+      b.setAttribute('aria-checked', 'false');
+      onStop();
+    });
+  }
+
+  /** Take or raze a fallen city. */
+  askCity(cityName: string, gold: number): Promise<'take' | 'raze'> {
+    const box = this.el.querySelector('.bchoice') as HTMLElement;
+    const status = this.el.querySelector('.bstatus') as HTMLElement | null;
+    if (status) status.textContent = `${cityName} has fallen! Take it, or raze it for ${gold} gold.`;
+    this.el.classList.add('open');
+    box.innerHTML = `<button class="btn danger small b-raze">${ICONS.skull}Raze · +${gold} gold</button><button class="btn go b-take">${ICONS.home}Take the city</button>`;
+    return new Promise((resolve) => {
+      box.querySelector('.b-take')!.addEventListener('click', () => { box.innerHTML = ''; resolve('take'); });
+      box.querySelector('.b-raze')!.addEventListener('click', () => { box.innerHTML = ''; resolve('raze'); });
     });
   }
 
