@@ -1,7 +1,7 @@
 import { hexDistance } from './hex';
 import {
   TERRAIN_COST, armiesAt, armyStrength, attackTargets, cityAt, currentPlayer, defenseBonus, garrisonUnit, growTargets, landRegions, neighbors, ownArmies, ownCities,
-  ownedRegions, hireCost, pathTo, reachable, recruitCost, terraformTargets, unitCount, validate, wallAt,
+  ownedRegions, hireCost, pathTo, reachable, recruitCost, terraformTargets, validate, wallAt,
 } from './rules';
 import type { Action, Army, FactionId, GameState } from './types';
 import { ARMY_FREE_SIZE, CITY_COST, DWARF_UNITS, FACTION_UNITS, IMPROVE_COST, MAX_CITY_LEVEL, MAX_IMPROVE, UNIT_STATS, UPGRADE_COST, unitCost } from './unitstats';
@@ -132,14 +132,15 @@ export function aiNextAction(s: GameState): Action {
     if (t !== undefined) return { type: 'terraform', p: f, army: a.id, target: t };
   }
 
-  // 1e. Hire dwarves that counter the strongest rival.
-  {
-    const rivals = s.players.filter((x) => x.alive && x.faction !== f).sort((x, y) => unitCount(s, y.faction) - unitCount(s, x.faction));
-    const want = DWARF_UNITS.find((u) => UNIT_STATS[u].counters === rivals[0]?.faction);
-    for (const fo of s.fortresses) {
-      if (!fo.discovered || !want || p.gold < hireCost(s, fo.tile, f) + 4) continue;
-      const a = mine.find((x) => nb[fo.tile].includes(x.tile));
-      if (a) { const act = legal(s, { type: 'hire', p: f, fortress: fo.tile, unit: want, army: a.id }); if (act) return act; }
+  // 1e. Hire dwarves: the best tier that leaves some gold over.
+  for (const fo of s.fortresses) {
+    if (!fo.discovered) continue;
+    const a = mine.find((x) => nb[fo.tile].includes(x.tile));
+    if (!a) continue;
+    for (const want of [...DWARF_UNITS].reverse()) {
+      if (p.gold < hireCost(s, fo.tile, f, want) + 4) continue;
+      const act = legal(s, { type: 'hire', p: f, fortress: fo.tile, unit: want, army: a.id });
+      if (act) return act;
     }
   }
 

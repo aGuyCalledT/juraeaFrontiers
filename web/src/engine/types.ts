@@ -129,7 +129,7 @@ export interface GameSetup {
 }
 
 export interface GameState {
-  version: 6;
+  version: 7;
   setup: GameSetup;
   rng: number;
   radius: number;
@@ -177,6 +177,9 @@ export interface CombatDie {
   total: number;
   /** removed before the comparison (died to a cannon shot) */
   void?: boolean;
+  /** earlier rolls replaced by a Rune Priest's reroll */
+  rerolled?: number[];
+  rerollBy?: number;
 }
 
 export interface CannonShot {
@@ -184,6 +187,8 @@ export interface CannonShot {
   shooter: number; // unit id
   rolls: number[]; // each extra roll; >= 4 hits
   hits: number[]; // unit ids wounded, in order
+  /** 'thunder': a Thunderer's opening shot (always hits); otherwise a Lead Belcher's cannon. */
+  kind?: 'thunder';
 }
 
 export interface CombatPair {

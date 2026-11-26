@@ -121,15 +121,15 @@ Every faction has one spell. It is ready after 3 of its own turns and recharges 
 - Every map has **2 dwarf fortresses** on mountains, far from the capitals. Nobody can enter them.
 - They are hidden until any army stands next to one; then everyone can see it.
 - An army standing next to a fortress can hire dwarves. They join that army.
-- Price: **6 gold** for the faction that discovered that fortress, **9 gold** for everyone else (v2.3).
+- **v3.2:** no more faction counters; the dwarves are a normal tier set. Prices like tier units (**3 / 6 / 9**) for the faction that discovered that fortress, **half again** for everyone else (**5 / 9 / 14**). Thunderers count towards the tier-3 limit.
 
-| Unit | Tier | Attack | Defence | HP | Counters |
+| Tier | Unit | Attack | Defence | HP | Special |
 |---|---|---|---|---|---|
-| Rune Priest | 2 | +1 | +1 | 2 | +2 / +2 against the Death Cults |
-| Woodcutter | 2 | +1 | +1 | 2 | +2 / +2 against Evergarden |
-| Giant Slayer | 2 | +1 | +1 | 2 | +2 / +2 against the Giants |
+| 1 | Axe Dwarf | +1 | +0 | 1 | A skeleton with +1 attack. |
+| 2 | Rune Priest | +3 | +0 | 1 | Every fight round he **rerolls the worst die of his side** (the new roll counts; each priest rerolls once). |
+| 3 | Thunderer | +0 | +0 | 1 | In the **first round** of a fight, attacking or defending, he fires before the exchange and **always wounds** the weakest enemy (like a Lead Belcher's cannon). After that he fights like a skeleton. |
 
-*(Stats and the +2 counter bonus are my choice.)*
+**Dwarf armies:** an army made **only of dwarves** pays just **2 movement for mountains** (instead of 3) and can **cross and stand on high peaks** (also 2). High peaks give +1 defence like mountains.
 
 ## Balance notes (AI against AI, 60 games, rules v2.2)
 - Average **28 rounds** (target 25–35).
@@ -150,4 +150,4 @@ Every faction has one spell. It is ready after 3 of its own turns and recharges 
 ## Playtesting (v2.3)
 - The pause menu and the victory screen have a **Playtest report**: add notes, then copy it (or it downloads as a text file if the browser blocks the clipboard).
 - The report lists, per faction: result, income, bounty and loot, upkeep, gold spent on units and buildings, recruits, dwarves hired, units slain and lost, spells cast, forests changed, and peak units, cities and hexes.
-- Good things to watch with human players: does one tier-3 unit decide fights, are dwarves bought only as counters, does the stone wall stall games, do the Death Cults snowball? (v3: do capitals hold long enough, are siege engines worth 4 gold, is Auto-fight used?)
+- Good things to watch with human players: does one tier-3 unit decide fights, which dwarves get hired and do pure dwarf armies use the peaks, does the stone wall stall games, do the Death Cults snowball? (v3: do capitals hold long enough, are siege engines worth 4 gold, is Auto-fight used?)

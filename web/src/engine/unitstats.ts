@@ -4,7 +4,7 @@ export type UnitType =
   | 'skeleton' | 'lich' | 'priest' | 'colossus'
   | 'archer' | 'druid' | 'treant'
   | 'irongut' | 'belcher' | 'mammoth'
-  | 'runepriest' | 'woodcutter' | 'slayer'
+  | 'axedwarf' | 'runepriest' | 'thunderer'
   | 'wildling' | 'wall' | 'siege';
 
 export interface UnitStats {
@@ -13,8 +13,6 @@ export interface UnitStats {
   plural: string;
   faction: FactionId | 'neutral' | 'dwarves';
   tier: 1 | 2 | 3;
-  /** Dwarves: +2 attack and defence against this faction. */
-  counters?: FactionId;
   attack: number;
   defense: number;
   hp: number;
@@ -52,17 +50,14 @@ export const UNIT_STATS: Record<UnitType, UnitStats> = {
     type: 'colossus', name: 'Bone Colossus', plural: 'Bone Colossi', faction: 'necro', tier: 3, attack: 3, defense: 1, hp: 3,
     ability: 'Built by the Death Cults’ spell from three skeletons.',
   },
+  axedwarf: { type: 'axedwarf', name: 'Axe Dwarf', plural: 'Axe Dwarves', faction: 'dwarves', tier: 1, attack: 1, defense: 0, hp: 1, ability: 'Dwarf mercenary.' },
   runepriest: {
-    type: 'runepriest', name: 'Rune Priest', plural: 'Rune Priests', faction: 'dwarves', tier: 2, attack: 1, defense: 1, hp: 2, counters: 'necro',
-    ability: 'Dwarf mercenary. +2 attack and defence against the Death Cults.',
+    type: 'runepriest', name: 'Rune Priest', plural: 'Rune Priests', faction: 'dwarves', tier: 2, attack: 3, defense: 0, hp: 1,
+    ability: 'Dwarf mercenary. Every fight round, rerolls the worst die of its side.',
   },
-  woodcutter: {
-    type: 'woodcutter', name: 'Woodcutter', plural: 'Woodcutters', faction: 'dwarves', tier: 2, attack: 1, defense: 1, hp: 2, counters: 'elves',
-    ability: 'Dwarf mercenary. +2 attack and defence against Evergarden.',
-  },
-  slayer: {
-    type: 'slayer', name: 'Giant Slayer', plural: 'Giant Slayers', faction: 'dwarves', tier: 2, attack: 1, defense: 1, hp: 2, counters: 'giants',
-    ability: 'Dwarf mercenary. +2 attack and defence against the Giants.',
+  thunderer: {
+    type: 'thunderer', name: 'Thunderer', plural: 'Thunderers', faction: 'dwarves', tier: 3, attack: 0, defense: 0, hp: 1,
+    ability: 'Dwarf mercenary. In the first round of a fight (attacking or defending) it fires before the exchange and always wounds the weakest enemy.',
   },
   wildling: { type: 'wildling', name: 'Wildling', plural: 'Wildlings', faction: 'neutral', tier: 1, attack: 0, defense: 1, hp: 1 },
   siege: {
@@ -75,9 +70,14 @@ export const UNIT_STATS: Record<UnitType, UnitStats> = {
   },
 };
 
-export const DWARF_UNITS: UnitType[] = ['runepriest', 'woodcutter', 'slayer'];
-export const DWARF_COST = 6; // for the side that found the fortress
-export const DWARF_COST_OTHERS = 9;
+export const DWARF_UNITS: UnitType[] = ['axedwarf', 'runepriest', 'thunderer'];
+/** Dwarves cost like tier units (3/6/9) for the side that found the fortress, half again for everyone else. */
+export function dwarfCost(type: UnitType, finder: boolean): number {
+  const base = TIER_COST[UNIT_STATS[type].tier];
+  return finder ? base : Math.ceil(base * 1.5);
+}
+/** Pure dwarf armies: mountains and high peaks cost this much to enter. */
+export const DWARF_MOUNTAIN_COST = 2;
 /** Tunable numbers for the necromancers' raising (kept in one object for balance runs). */
 export const RAISE = { on: 6, priestRolls: 3 };
 export const SPELL_COOLDOWN = 3;
@@ -101,7 +101,7 @@ const TIER_COST = { 1: 3, 2: 6, 3: 9 } as const;
 
 export function unitCost(type: UnitType): number {
   const s = UNIT_STATS[type];
-  if (s.faction === 'dwarves') return DWARF_COST;
+  if (s.faction === 'dwarves') return dwarfCost(type, true);
   if (type === 'colossus' || type === 'wall') return 0;
   if (type === 'siege') return SIEGE_COST;
   return TIER_COST[s.tier] * (s.faction === 'giants' ? 2 : 1);

@@ -439,7 +439,7 @@ ${shadow(20)}
   </g>
 </g>`;
 
-const woodcutter = `
+const axedwarf = `
 ${shadow(20)}
 <g class="u-rig">
   ${dwarfBody('#c4652a', '#3f8a4a', `<path d="M36 70 L84 70" stroke="#c94f3a" stroke-width="5"/><path d="M36 76 L84 76" stroke="#c94f3a" stroke-width="5" opacity=".6"/>`)}
@@ -454,17 +454,20 @@ ${shadow(20)}
   </g>
 </g>`;
 
-const slayer = `
+const thunderer = `
 ${shadow(20)}
 <g class="u-rig">
-  ${dwarfBody('#e07a2a', DSKIN, `<path d="M40 70 Q60 64 80 70" stroke="#6b3f1f" stroke-width="4" fill="none"/><path d="M44 74 L50 66 M76 74 L70 66" stroke="#3a7fd0" stroke-width="3"/>`)}
-  <g class="u-head"><path d="M56 34 L54 10 L60 18 L62 6 L66 18 L70 12 L66 34 Z" fill="#ff7a2e" ${o(2.5)}/></g>
-  <path d="M36 66 Q24 72 26 86" fill="none" stroke="${K}" stroke-width="12" stroke-linecap="round"/><path d="M36 66 Q24 72 26 86" fill="none" stroke="${DSKIN}" stroke-width="7" stroke-linecap="round"/>
-  <g class="u-weapon" style="transform-origin: 84px 74px">
-    <path d="M84 66 Q94 70 90 78" fill="none" stroke="${K}" stroke-width="12" stroke-linecap="round"/><path d="M84 66 Q94 70 90 78" fill="none" stroke="${DSKIN}" stroke-width="7" stroke-linecap="round"/>
-    <path d="M90 80 L100 16" stroke="${K}" stroke-width="8" stroke-linecap="round"/><path d="M90 80 L100 16" stroke="#6b3f1f" stroke-width="4" stroke-linecap="round"/>
-    <path d="M100 20 Q84 14 82 30 Q92 32 99 28 Z M100 20 Q116 14 118 30 Q108 32 101 28 Z" fill="#c9cdd2" ${o(3)}/>
-    <circle cx="90" cy="78" r="5" fill="${DSKIN}" ${o(2.5)}/>
+  ${dwarfBody('#8a8f96', '#7a3b2e', `<path d="M40 68 L80 92 M80 68 L40 92" stroke="#3b2617" stroke-width="4"/><circle cx="48" cy="74" r="3" fill="#ffd23f" ${o(1.5)}/><circle cx="72" cy="74" r="3" fill="#ffd23f" ${o(1.5)}/>`)}
+  <g class="u-head"><path d="M44 44 Q44 28 60 27 Q76 28 76 44 Z" fill="#9ba3ab" ${o(3)}/><path d="M42 44 L78 44" stroke="${K}" stroke-width="6" stroke-linecap="round"/><path d="M42 44 L78 44" stroke="#c9cdd2" stroke-width="3" stroke-linecap="round"/><path d="M60 27 L60 18" stroke="${K}" stroke-width="4" stroke-linecap="round"/><circle cx="60" cy="17" r="4" fill="#ffd23f" ${o(2)}/></g>
+  <g class="u-weapon" style="transform-origin: 70px 74px">
+    <path d="M36 66 Q34 78 46 80" fill="none" stroke="${K}" stroke-width="11" stroke-linecap="round"/><path d="M36 66 Q34 78 46 80" fill="none" stroke="#7a3b2e" stroke-width="6" stroke-linecap="round"/>
+    <path d="M40 86 L54 74 L60 78 L46 92 Z" fill="#8a5a2b" ${o(3)}/>
+    <path d="M54 76 L112 52" stroke="${K}" stroke-width="10" stroke-linecap="round"/><path d="M54 76 L112 52" stroke="#5e6670" stroke-width="5.5" stroke-linecap="round"/>
+    <path d="M60 73 L84 63" stroke="#c9cdd2" stroke-width="2" stroke-linecap="round"/>
+    <circle cx="46" cy="80" r="5" fill="${DSKIN}" ${o(2.5)}/>
+    <path d="M84 66 Q90 72 80 76" fill="none" stroke="${K}" stroke-width="11" stroke-linecap="round"/><path d="M84 66 Q90 72 80 76" fill="none" stroke="#7a3b2e" stroke-width="6" stroke-linecap="round"/>
+    <circle cx="80" cy="66" r="5" fill="${DSKIN}" ${o(2.5)}/>
+    <g class="u-fx"><circle cx="116" cy="50" r="10" fill="#ffd23f" opacity=".85"/><path d="M116 36 L119 46 L130 44 L121 51 L128 60 L117 55 L110 64 L111 53 L100 50 L111 47 Z" fill="#fff2a8" ${o(2)}/><circle cx="104" cy="40" r="5" fill="#e6e2da" opacity=".8"/></g>
   </g>
 </g>`;
 
@@ -534,16 +537,16 @@ ${shadow(20)}
   </g>
 </g>`;
 
-const ART: Record<UnitId, string> = { skeleton, lich, priest, colossus, archer, druid, treant, irongut, belcher, mammoth, runepriest, woodcutter, slayer, wildling, wall, siege };
+const ART: Record<UnitId, string> = { skeleton, lich, priest, colossus, archer, druid, treant, irongut, belcher, mammoth, axedwarf, runepriest, thunderer, wildling, wall, siege };
 const STYLE: Record<UnitId, AttackStyle> = {
   skeleton: 'swing', lich: 'cast', priest: 'cast', colossus: 'swing', archer: 'shoot', druid: 'cast', treant: 'swing',
-  irongut: 'swing', belcher: 'cannon', mammoth: 'stomp', runepriest: 'cast', woodcutter: 'swing', slayer: 'swing', wildling: 'swing', wall: 'stomp', siege: 'stomp',
+  irongut: 'swing', belcher: 'cannon', mammoth: 'stomp', axedwarf: 'swing', runepriest: 'cast', thunderer: 'cannon', wildling: 'swing', wall: 'stomp', siege: 'stomp',
 };
 /** Size relative to the 120px box. Giants tower over everyone, the mammoth most of all. */
 export const UNIT_SCALE: Record<UnitId, number> = {
   skeleton: 0.74, lich: 0.8, priest: 0.84, archer: 0.74, druid: 0.8, treant: 1.0,
   irongut: 1.08, belcher: 1.1, mammoth: 1.32, wildling: 0.74,
-  colossus: 1.12, runepriest: 0.66, woodcutter: 0.66, slayer: 0.66, wall: 0.95, siege: 0.86,
+  colossus: 1.12, axedwarf: 0.62, runepriest: 0.66, thunderer: 0.7, wall: 0.95, siege: 0.86,
 };
 
 const scaled = (id: UnitId) => {
@@ -558,7 +561,7 @@ export const UNITS: Record<UnitId, UnitSprite> = Object.fromEntries(
   }),
 ) as Record<UnitId, UnitSprite>;
 
-export const UNIT_ORDER: UnitId[] = ['skeleton', 'lich', 'priest', 'colossus', 'archer', 'druid', 'treant', 'irongut', 'belcher', 'mammoth', 'runepriest', 'woodcutter', 'slayer', 'siege', 'wildling', 'wall'];
+export const UNIT_ORDER: UnitId[] = ['skeleton', 'lich', 'priest', 'colossus', 'archer', 'druid', 'treant', 'irongut', 'belcher', 'mammoth', 'axedwarf', 'runepriest', 'thunderer', 'siege', 'wildling', 'wall'];
 
 export const TRIM: Record<UnitSprite['faction'], string> = { necro: '#8e4fc4', elves: '#f0b928', giants: '#e0452f', neutral: '#b9a88f', dwarves: '#3e6fb3' };
 
